@@ -14,42 +14,57 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/Ui/Sheet";
-import type { DealStage } from "@/lib/crm/types";
+import type { DealPricingModel, DealStage } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
 
 import { useDeals } from "./DealsContext";
 
 const DEAL_STAGE_OPTIONS: { value: DealStage; label: string; hint: string }[] =
   [
-    { value: "qualification", label: "Qualification", hint: "Fit" },
-    { value: "proposal", label: "Proposal", hint: "Shape" },
-    { value: "negotiation", label: "Negotiation", hint: "Close" },
+    { value: "lead", label: "Lead", hint: "New" },
+    { value: "contacted", label: "Contacted", hint: "Reply" },
+    { value: "discovery_call", label: "Discovery call", hint: "Fit" },
+    { value: "proposal_sent", label: "Proposal sent", hint: "Paper" },
+    { value: "negotiation", label: "Negotiation", hint: "Terms" },
     { value: "won", label: "Won", hint: "Booked" },
     { value: "lost", label: "Lost", hint: "Recycle" },
   ];
+
+const PRICING_OPTIONS: { value: DealPricingModel | ""; label: string }[] = [
+  { value: "", label: "Pricing model…" },
+  { value: "fixed", label: "Fixed fee" },
+  { value: "hourly", label: "Hourly" },
+  { value: "retainer", label: "Retainer" },
+];
 
 export function AddDealSheet() {
   const { addDeal } = useDeals();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [company, setCompany] = useState("");
-  const [stage, setStage] = useState<DealStage>("qualification");
+  const [stage, setStage] = useState<DealStage>("lead");
   const [valueEur, setValueEur] = useState("");
   const [probability, setProbability] = useState("35");
   const [closeDate, setCloseDate] = useState(() =>
     new Date().toISOString().slice(0, 10),
   );
   const [owner, setOwner] = useState("");
+  const [serviceLine, setServiceLine] = useState("");
+  const [dealScope, setDealScope] = useState("");
+  const [pricingModel, setPricingModel] = useState<DealPricingModel | "">("");
   const [error, setError] = useState<string | null>(null);
 
   const reset = useCallback(() => {
     setTitle("");
     setCompany("");
-    setStage("qualification");
+    setStage("lead");
     setValueEur("");
     setProbability("35");
     setCloseDate(new Date().toISOString().slice(0, 10));
     setOwner("");
+    setServiceLine("");
+    setDealScope("");
+    setPricingModel("");
     setError(null);
   }, []);
 
@@ -87,15 +102,21 @@ export function AddDealSheet() {
       probability: prob,
       closeDate,
       owner,
+      serviceLine: serviceLine.trim() || null,
+      dealScope: dealScope.trim() || null,
+      pricingModel: pricingModel || null,
     });
     handleOpenChange(false);
   }, [
     addDeal,
     closeDate,
     company,
+    dealScope,
     handleOpenChange,
     owner,
+    pricingModel,
     probability,
+    serviceLine,
     stage,
     title,
     valueEur,
@@ -178,6 +199,64 @@ export function AddDealSheet() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label
+                htmlFor="deal-service"
+                className="text-muted-foreground text-xs font-medium"
+              >
+                Service line
+              </label>
+              <Input
+                id="deal-service"
+                value={serviceLine}
+                onChange={(e) => setServiceLine(e.target.value)}
+                placeholder="e.g. SEO audit, Next.js build"
+                className="h-10 rounded-none border-white/[0.08] bg-[color-mix(in_oklab,var(--card)_55%,transparent)]"
+                autoComplete="off"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label
+                htmlFor="deal-pricing"
+                className="text-muted-foreground text-xs font-medium"
+              >
+                Pricing model
+              </label>
+              <select
+                id="deal-pricing"
+                value={pricingModel}
+                onChange={(e) =>
+                  setPricingModel(e.target.value as DealPricingModel | "")
+                }
+                className="border-input bg-[color-mix(in_oklab,var(--card)_55%,transparent)] h-10 w-full rounded-none border border-white/[0.08] px-3 text-sm [color-scheme:dark]"
+              >
+                {PRICING_OPTIONS.map((p) => (
+                  <option key={p.label} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label
+              htmlFor="deal-scope"
+              className="text-muted-foreground text-xs font-medium"
+            >
+              Scope snapshot
+            </label>
+            <Input
+              id="deal-scope"
+              value={dealScope}
+              onChange={(e) => setDealScope(e.target.value)}
+              placeholder="e.g. Landing + CMS, 6-week sprint"
+              className="h-10 rounded-none border-white/[0.08] bg-[color-mix(in_oklab,var(--card)_55%,transparent)]"
+              autoComplete="off"
+            />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

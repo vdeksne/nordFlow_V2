@@ -4,9 +4,14 @@ import { Check } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { Task, TaskPriority } from "@/lib/crm/types";
+import { formatTaskRelatedLine } from "@/lib/crm/task-related-label";
 import { cn } from "@/lib/utils";
 
 import { AddTaskSheet } from "./AddTaskSheet";
+import { useCompanies } from "./CompaniesContext";
+import { useContacts } from "./ContactsContext";
+import { useDeals } from "./DealsContext";
+import { useLeads } from "./LeadsContext";
 import { TaskDetailSheet } from "./TaskDetailSheet";
 import { useTasks } from "./TasksContext";
 
@@ -92,6 +97,20 @@ function TaskCard({
   onOpen: () => void;
 }) {
   const overdue = isOverdue(task.dueAt, task.done);
+  const { deals } = useDeals();
+  const { companies } = useCompanies();
+  const { leads } = useLeads();
+  const { contacts } = useContacts();
+  const relatedLine = useMemo(
+    () =>
+      formatTaskRelatedLine(task, {
+        deals,
+        companies,
+        leads,
+        contacts,
+      }),
+    [task, deals, companies, leads, contacts],
+  );
 
   return (
     <article className="group relative rounded-none">
@@ -175,7 +194,7 @@ function TaskCard({
               {task.title}
             </h3>
             <p className="text-muted-foreground truncate text-[11px] font-medium tracking-wide uppercase">
-              {task.relatedTo}
+              {relatedLine}
             </p>
           </div>
 

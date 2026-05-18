@@ -30,6 +30,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/Ui/Card";
 import type { Deal, DealStage, Lead } from "@/lib/crm/types";
 import { formatEur } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 import { useCustomers } from "./CustomersContext";
 import { useTasks } from "./TasksContext";
@@ -37,6 +38,8 @@ import { useTasks } from "./TasksContext";
 type DashboardChartsProps = {
   deals: Deal[];
   leads: Lead[];
+  /** `lean` hides the chart wall — trajectory + revenue mix only. */
+  density?: "full" | "lean";
 };
 
 const CHART_COLORS = [
@@ -48,15 +51,26 @@ const CHART_COLORS = [
 ] as const;
 
 const STAGE_ORDER: DealStage[] = [
-  "qualification",
-  "proposal",
+  "lead",
+  "contacted",
+  "discovery_call",
+  "proposal_sent",
   "negotiation",
   "won",
   "lost",
 ];
 
-function stageLabel(s: DealStage) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+function stageLabel(s: DealStage): string {
+  const labels: Record<DealStage, string> = {
+    lead: "Lead",
+    contacted: "Contacted",
+    discovery_call: "Discovery call",
+    proposal_sent: "Proposal sent",
+    negotiation: "Negotiation",
+    won: "Won",
+    lost: "Lost",
+  };
+  return labels[s];
 }
 
 function scatterStageFill(stage: Deal["stage"]) {
@@ -65,10 +79,14 @@ function scatterStageFill(stage: Deal["stage"]) {
       return CHART_COLORS[1];
     case "negotiation":
       return CHART_COLORS[0];
-    case "proposal":
+    case "proposal_sent":
       return CHART_COLORS[2];
-    case "qualification":
+    case "discovery_call":
       return CHART_COLORS[3];
+    case "contacted":
+      return CHART_COLORS[4];
+    case "lead":
+      return "var(--chart-5)";
     default:
       return CHART_COLORS[4];
   }
@@ -96,7 +114,7 @@ function ScatterDealTooltip({
   return (
     <div className="border-sidebar-border z-50 max-w-[240px] rounded-xl border border-white/[0.1] bg-[color-mix(in_oklab,var(--popover)_94%,transparent)] px-3 py-2.5 text-xs shadow-xl backdrop-blur-xl">
       <p className="text-foreground font-semibold leading-snug">{d.company}</p>
-      <p className="text-muted-foreground mt-0.5 capitalize">{d.stage}</p>
+      <p className="text-muted-foreground mt-0.5">{stageLabel(d.stage as DealStage)}</p>
       <p className="text-foreground mt-2 tabular-nums font-medium">
         {formatEur(Math.round(d.value))}
         <span className="text-muted-foreground font-normal">
@@ -219,7 +237,11 @@ function GaugeRing({
   );
 }
 
-export function DashboardCharts({ deals, leads }: DashboardChartsProps) {
+export function DashboardCharts({
+  deals,
+  leads,
+  density = "full",
+}: DashboardChartsProps) {
   const { customers } = useCustomers();
   const { tasks } = useTasks();
   const gid = useId().replace(/:/g, "");
@@ -418,13 +440,13 @@ export function DashboardCharts({ deals, leads }: DashboardChartsProps) {
             value: 72000,
             z: 260,
             company: "Northstar Advisory",
-            stage: "proposal",
+            stage: "proposal_sent",
             title: "Expand pipeline — bubbles appear per live deal",
           },
         ];
 
   const scatterLegendStages = (
-    ["qualification", "proposal", "negotiation", "won"] as const
+    ["lead", "contacted", "discovery_call", "proposal_sent", "negotiation", "won"] as const
   ).filter((s) => scatterPlotData.some((d) => d.stage === s));
 
   const axisTick = {
@@ -433,23 +455,37 @@ export function DashboardCharts({ deals, leads }: DashboardChartsProps) {
     opacity: 0.85,
   };
 
+  const lean = density === "lean";
+
   return (
     <section className="space-y-6">
-      <div className="border-sidebar-border relative overflow-hidden rounded-none border border-white/[0.06] bg-[color-mix(in_oklab,var(--card)_82%,transparent)] p-6 backdrop-blur-md md:p-8">
-        <div className="relative space-y-2">
-          <p className="text-primary text-[10px] font-semibold tracking-[0.28em] uppercase">
-            Momentum cockpit
-          </p>
-          <h2 className="text-foreground text-xl font-semibold tracking-tight md:text-2xl">
-            See the upside you&apos;re building, then push one more deal forward.
-          </h2>
-          <p className="text-muted-foreground max-w-3xl text-sm leading-relaxed">
-            Composition of booked revenue, recurring portfolio, probability-weighted
-            pipeline, and fresh leads. Charts blend mock CRM rows with your live
-            customers & tasks so the board feels personal.
+      {lean ? (
+        <div className="border-sidebar-border rounded-none border border-white/[0.05] bg-[color-mix(in_oklab,var(--card)_72%,transparent)] px-4 py-3 backdrop-blur-md sm:px-5">
+          <p className="text-muted-foreground text-[11px] font-medium tracking-wide">
+            <span className="text-primary font-semibold tracking-[0.18em] uppercase">
+              Glance
+            </span>
+            {" · "}
+            Two charts so you remember money exists between Slack pings.
           </p>
         </div>
-      </div>
+      ) : (
+        <div className="border-sidebar-border relative overflow-hidden rounded-none border border-white/[0.06] bg-[color-mix(in_oklab,var(--card)_82%,transparent)] p-6 backdrop-blur-md md:p-8">
+          <div className="relative space-y-2">
+            <p className="text-primary text-[10px] font-semibold tracking-[0.28em] uppercase">
+              Momentum cockpit
+            </p>
+            <h2 className="text-foreground text-xl font-semibold tracking-tight md:text-2xl">
+              See the upside you&apos;re building, then push one more deal forward.
+            </h2>
+            <p className="text-muted-foreground max-w-3xl text-sm leading-relaxed">
+              Composition of booked revenue, recurring portfolio, probability-weighted
+              pipeline, and fresh leads. Charts blend mock CRM rows with your live
+              customers & tasks so the board feels personal.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-12">
         <Card className="border-sidebar-border lg:col-span-8 overflow-hidden border-white/[0.06] bg-[color-mix(in_oklab,var(--card)_88%,transparent)] shadow-none backdrop-blur-md">
@@ -610,6 +646,8 @@ export function DashboardCharts({ deals, leads }: DashboardChartsProps) {
           </CardContent>
         </Card>
 
+        {!lean ? (
+          <>
         <Card className="border-sidebar-border lg:col-span-6 border-white/[0.06] bg-[color-mix(in_oklab,var(--card)_88%,transparent)] shadow-none backdrop-blur-md">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold tracking-tight">
@@ -921,7 +959,7 @@ export function DashboardCharts({ deals, leads }: DashboardChartsProps) {
                 Execution scores
               </CardTitle>
               <CardDescription>
-                Summary scores from tasks, win mix, and qualification density.
+                Summary scores from tasks, win mix, and qualified lead density.
                 Close the loop to push these higher.
               </CardDescription>
             </div>
@@ -952,12 +990,28 @@ export function DashboardCharts({ deals, leads }: DashboardChartsProps) {
             </div>
           </CardContent>
         </Card>
+          </>
+        ) : null}
       </div>
 
-      <p className="text-muted-foreground/80 text-center text-[10px] tracking-[0.14em] uppercase">
-        Booked wins · {formatEur(Math.round(wonSum))} · Weighted open ·{" "}
-        {formatEur(Math.round(weightedOpen))} · {openPipeline.length} active deals ·
-        Fees {formatEur(Math.round(portfolioFees))}
+      <p
+        className={cn(
+          "text-muted-foreground/80 text-center text-[10px] tracking-[0.14em] uppercase",
+          lean && "tracking-[0.12em]",
+        )}
+      >
+        {lean ? (
+          <>
+            Won · {formatEur(Math.round(wonSum))} · Open weighted ·{" "}
+            {formatEur(Math.round(weightedOpen))} · {openPipeline.length} deals in motion
+          </>
+        ) : (
+          <>
+            Booked wins · {formatEur(Math.round(wonSum))} · Weighted open ·{" "}
+            {formatEur(Math.round(weightedOpen))} · {openPipeline.length} active deals ·
+            Fees {formatEur(Math.round(portfolioFees))}
+          </>
+        )}
       </p>
     </section>
   );

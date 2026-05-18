@@ -1,7 +1,39 @@
+/** Where an inbound record originated — stored at company level. */
+export type LeadSource =
+  | "linkedin"
+  | "referral"
+  | "cold_email"
+  | "website"
+  | "event"
+  | "other";
+
+export type Company = {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  websiteUrl?: string | null;
+  techStack?: string | null;
+  tags: string[];
+  source: LeadSource | null;
+};
+
+export type Contact = {
+  id: string;
+  companyId: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  role?: string | null;
+};
+
 export type LeadStage = "new" | "contacted" | "qualified" | "lost";
 
 export type Lead = {
   id: string;
+  companyId: string;
+  primaryContactId?: string | null;
+  /** Denormalized — mirrors Company.name for fast tables */
   company: string;
   contactName: string;
   email: string;
@@ -9,6 +41,95 @@ export type Lead = {
   valueEur: number;
   owner: string;
   updatedAt: string;
+};
+
+/** Freelancer pipeline — matches revenue stages before win/loss. */
+export type DealStage =
+  | "lead"
+  | "contacted"
+  | "discovery_call"
+  | "proposal_sent"
+  | "negotiation"
+  | "won"
+  | "lost";
+
+export type DealPricingModel = "fixed" | "hourly" | "retainer";
+
+export type Deal = {
+  id: string;
+  companyId: string;
+  primaryContactId?: string | null;
+  /** Denormalized account label for cards */
+  company: string;
+  title: string;
+  stage: DealStage;
+  valueEur: number;
+  probability: number;
+  closeDate: string;
+  owner: string;
+  /** Primary commercial line (design, dev, SEO, …) */
+  serviceLine?: string | null;
+  dealScope?: string | null;
+  pricingModel?: DealPricingModel | null;
+};
+
+export type TaskPriority = "low" | "medium" | "high";
+
+export type TaskRelatedKind = "deal" | "company" | "contact" | "lead" | "none";
+
+export type Task = {
+  id: string;
+  title: string;
+  relatedKind: TaskRelatedKind;
+  relatedId: string | null;
+  dueAt: string;
+  priority: TaskPriority;
+  done: boolean;
+  assignee: string;
+};
+
+export type InvoiceStatus = "draft" | "sent" | "paid";
+
+export type Invoice = {
+  id: string;
+  dealId?: string | null;
+  companyId: string;
+  amountEur: number;
+  status: InvoiceStatus;
+  paymentMethod?: string | null;
+  note?: string | null;
+  updatedAt: string;
+};
+
+export type ActivityKind = "call" | "email" | "meeting" | "note" | "file";
+
+export type ActivityParentKind = "deal" | "company" | "contact" | "lead";
+
+export type ActivityNote = {
+  id: string;
+  parentKind: ActivityParentKind;
+  parentId: string;
+  kind: ActivityKind;
+  title?: string | null;
+  body: string;
+  occurredAt: string;
+};
+
+/** Post-sale delivery — lanes follow calendar buckets on the Projects board */
+export type ProjectStatus = "planned" | "active" | "blocked" | "done";
+
+export type Project = {
+  id: string;
+  title: string;
+  companyId: string;
+  company: string;
+  dealId?: string | null;
+  /** Anchor calendar date for year / month / week lanes */
+  scheduledStart: string;
+  /** Optional local hour (0–23) for day-board lanes */
+  scheduledHour?: number | null;
+  status: ProjectStatus;
+  owner: string;
 };
 
 /** Mirrors the CLIENT PORTFOLIO sheet column layout (spreadsheet template). */
@@ -54,32 +175,33 @@ export type CustomerPortfolio = {
   address: string | null;
 };
 
-export type DealStage =
-  | "qualification"
-  | "proposal"
-  | "negotiation"
-  | "won"
-  | "lost";
+/** ~30–90 day execution outcomes (OKR-style “committed” horizon) */
+export type GoalHorizon = "short_term" | "long_term";
 
-export type Deal = {
+export type GoalStatus = "active" | "completed" | "archived";
+
+/** Life / business pillars common in exec & coaching frameworks */
+export type GoalArea =
+  | "revenue"
+  | "delivery"
+  | "growth"
+  | "health"
+  | "learning"
+  | "relationships";
+
+export type Goal = {
   id: string;
+  horizon: GoalHorizon;
   title: string;
-  company: string;
-  stage: DealStage;
-  valueEur: number;
-  probability: number;
-  closeDate: string;
-  owner: string;
-};
-
-export type TaskPriority = "low" | "medium" | "high";
-
-export type Task = {
-  id: string;
-  title: string;
-  relatedTo: string;
-  dueAt: string;
-  priority: TaskPriority;
-  done: boolean;
-  assignee: string;
+  /** Measurable outcome (“specific / measurable”) */
+  metric: string | null;
+  targetDate: string | null;
+  /** 0–100 checkpoint */
+  progress: number;
+  status: GoalStatus;
+  area: GoalArea | null;
+  /** Weekly / retro scratchpad */
+  reviewNote: string | null;
+  sortOrder: number;
+  updatedAt: string;
 };

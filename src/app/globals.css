@@ -141,3 +141,12 @@
     @apply font-sans;
   }
 }
+
+/* Freelancer dashboard — deeper ink on cards inside this subtree */
+.dashboard-focus {
+  --card: #020508;
+  --popover: #030a12;
+  --muted: #070f18;
+  --secondary: #08121c;
+  --accent: #0c1826;
+}

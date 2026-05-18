@@ -12,11 +12,12 @@ export function OpenTasksStatCard() {
 
   return (
     <StatCard
-      title="Follow-ups due"
+      title="Open loops"
       value={`${openTasks}`}
-      hint="Tasks still marked incomplete."
+      hint="Still yours until the checkbox says otherwise."
       icon={ListTodo}
-      trend={{ label: "Assign owners from Tasks module", positive: false }}
+      trend={{ label: "Done beats perfect", positive: true }}
+      className="border-white/[0.05]"
     />
   );
 }

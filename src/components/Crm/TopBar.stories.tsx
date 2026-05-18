@@ -7,9 +7,9 @@ const meta = {
   component: TopBar,
   tags: ["autodocs"],
   args: {
-    title: "Executive overview",
+    title: "Freelancer desk",
     subtitle:
-      "Pulse across pipeline, customer portfolio, leads, and tasks.",
+      "Knock out the top three tasks, then chase money. Everything else is cosplay.",
   },
 } satisfies Meta<typeof TopBar>;
 

@@ -13,7 +13,10 @@ import {
 import { leads as seedLeads } from "@/lib/crm/mock-data";
 import type { Lead, LeadStage } from "@/lib/crm/types";
 
-const STORAGE_KEY = "crm-leads-v1";
+import { useCompanies } from "./CompaniesContext";
+import { useContacts } from "./ContactsContext";
+
+const STORAGE_KEY = "crm-leads-v2";
 
 export type NewLeadInput = {
   company: string;
@@ -49,6 +52,8 @@ type LeadsContextValue = {
 const LeadsContext = createContext<LeadsContextValue | null>(null);
 
 export function LeadsProvider({ children }: { children: ReactNode }) {
+  const { ensureCompanyByName } = useCompanies();
+  const { addContact } = useContacts();
   const [leads, setLeads] = useState<Lead[]>(seedLeads);
   const [hydrated, setHydrated] = useState(false);
 
@@ -57,6 +62,8 @@ export function LeadsProvider({ children }: { children: ReactNode }) {
       const stored = loadStored();
       if (stored && stored.length > 0) {
         setLeads(stored);
+      } else {
+        setLeads(seedLeads);
       }
       setHydrated(true);
     });
@@ -67,26 +74,41 @@ export function LeadsProvider({ children }: { children: ReactNode }) {
     persist(leads);
   }, [leads, hydrated]);
 
-  const addLead = useCallback((input: NewLeadInput) => {
-    const company = input.company.trim();
-    const id =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `l-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const updatedAt = new Date().toISOString().slice(0, 10);
-    const lead: Lead = {
-      id,
-      company,
-      contactName: input.contactName.trim(),
-      email: input.email.trim(),
-      stage: input.stage,
-      valueEur: Number.isFinite(input.valueEur) ? Math.max(0, input.valueEur) : 0,
-      owner: input.owner.trim() || "You",
-      updatedAt,
-    };
-    setLeads((prev) => [...prev, lead]);
-    return lead;
-  }, []);
+  const addLead = useCallback(
+    (input: NewLeadInput) => {
+      const companyLabel = input.company.trim();
+      const companyId = ensureCompanyByName(companyLabel);
+      const id =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `l-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const updatedAt = new Date().toISOString().slice(0, 10);
+      const contactName = input.contactName.trim();
+      const lead: Lead = {
+        id,
+        companyId,
+        primaryContactId: `cnt-${id}`,
+        company: companyLabel,
+        contactName,
+        email: input.email.trim(),
+        stage: input.stage,
+        valueEur: Number.isFinite(input.valueEur) ? Math.max(0, input.valueEur) : 0,
+        owner: input.owner.trim() || "You",
+        updatedAt,
+      };
+      addContact({
+        id: `cnt-${id}`,
+        companyId,
+        name: contactName,
+        email: lead.email,
+        phone: null,
+        role: null,
+      });
+      setLeads((prev) => [...prev, lead]);
+      return lead;
+    },
+    [ensureCompanyByName, addContact],
+  );
 
   const value = useMemo(
     () => ({

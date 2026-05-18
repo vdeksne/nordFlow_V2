@@ -13,7 +13,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/Ui/Sheet";
-import type { Task } from "@/lib/crm/types";
+import type { Task, TaskRelatedKind } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
 
 import {
@@ -21,6 +21,7 @@ import {
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
 } from "./TaskFormShared";
+import { TaskRelatedFields } from "./TaskRelatedFields";
 import { useTasks } from "./TasksContext";
 
 type TaskDetailSheetProps = {
@@ -36,7 +37,8 @@ export function TaskDetailSheet({
 }: TaskDetailSheetProps) {
   const { updateTask, deleteTask, toggleTask } = useTasks();
   const [title, setTitle] = useState("");
-  const [relatedTo, setRelatedTo] = useState("");
+  const [relatedKind, setRelatedKind] = useState<TaskRelatedKind>("none");
+  const [relatedId, setRelatedId] = useState<string | null>(null);
   const [dueLocal, setDueLocal] = useState("");
   const [priority, setPriority] = useState<Task["priority"]>("medium");
   const [assignee, setAssignee] = useState("");
@@ -47,7 +49,8 @@ export function TaskDetailSheet({
     if (!open || !task) return;
     queueMicrotask(() => {
       setTitle(task.title);
-      setRelatedTo(task.relatedTo === "General" ? "" : task.relatedTo);
+      setRelatedKind(task.relatedKind);
+      setRelatedId(task.relatedId);
       setDueLocal(toDatetimeLocalValue(task.dueAt));
       setPriority(task.priority);
       setAssignee(task.assignee === "You" ? "" : task.assignee);
@@ -76,9 +79,15 @@ export function TaskDetailSheet({
       return;
     }
 
+    if (relatedKind !== "none" && !relatedId?.trim()) {
+      setError("Pick what this task is linked to, or set Link to General.");
+      return;
+    }
+
     updateTask(task.id, {
       title: trimmed,
-      relatedTo: relatedTo.trim() || "General",
+      relatedKind,
+      relatedId: relatedKind === "none" ? null : relatedId,
       dueAt: dueIso,
       priority,
       assignee: assignee.trim() || "You",
@@ -90,7 +99,8 @@ export function TaskDetailSheet({
     dueLocal,
     onOpenChange,
     priority,
-    relatedTo,
+    relatedId,
+    relatedKind,
     task,
     title,
     updateTask,
@@ -159,22 +169,12 @@ export function TaskDetailSheet({
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="detail-task-related"
-                  className="text-muted-foreground text-xs font-medium"
-                >
-                  Related to
-                </label>
-                <Input
-                  id="detail-task-related"
-                  value={relatedTo}
-                  onChange={(e) => setRelatedTo(e.target.value)}
-                  placeholder="Deal · Customer · Lead…"
-                  className="h-10 rounded-none border-white/[0.08] bg-[color-mix(in_oklab,var(--card)_55%,transparent)]"
-                  autoComplete="off"
-                />
-              </div>
+              <TaskRelatedFields
+                relatedKind={relatedKind}
+                relatedId={relatedId}
+                onRelatedKindChange={setRelatedKind}
+                onRelatedIdChange={setRelatedId}
+              />
 
               <div className="space-y-2">
                 <span className="text-muted-foreground text-xs font-medium">

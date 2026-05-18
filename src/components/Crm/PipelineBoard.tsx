@@ -8,9 +8,11 @@ const PIPELINE_STAGES: {
   title: string;
   hint: string;
 }[] = [
-  { stage: "qualification", title: "Qualification", hint: "Fit" },
-  { stage: "proposal", title: "Proposal", hint: "Shape" },
-  { stage: "negotiation", title: "Negotiation", hint: "Close" },
+  { stage: "lead", title: "Lead", hint: "New" },
+  { stage: "contacted", title: "Contacted", hint: "Reply" },
+  { stage: "discovery_call", title: "Discovery", hint: "Call" },
+  { stage: "proposal_sent", title: "Proposal", hint: "Sent" },
+  { stage: "negotiation", title: "Negotiation", hint: "Terms" },
   { stage: "won", title: "Won", hint: "Booked" },
   { stage: "lost", title: "Lost", hint: "Recycle" },
 ];
@@ -194,7 +196,7 @@ export function PipelineBoard({ deals = defaultDeals }: PipelineBoardProps) {
         </div>
       </div>
 
-      <div className="flex min-h-[420px] gap-5 overflow-x-auto pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory md:overflow-visible md:snap-none">
+      <div className="flex min-h-[420px] min-w-[920px] gap-5 overflow-x-auto pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory md:min-w-0 md:overflow-visible md:snap-none">
         {columns.map((column) => {
           const columnTotal = column.items.reduce((s, d) => s + d.valueEur, 0);
           return (

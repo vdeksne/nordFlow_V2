@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { ListTodo, Sparkles, TrendingUp, Users } from "lucide-react";
+import { ListTodo, TrendingUp, Users } from "lucide-react";
 
 import { StatCard } from "./StatCard";
-import { customers, deals, leads, tasks } from "@/lib/crm/mock-data";
+import { customers, deals, tasks } from "@/lib/crm/mock-data";
 import { formatEur } from "@/lib/format";
 
 function DashboardStatsDemo() {
@@ -16,35 +16,35 @@ function DashboardStatsDemo() {
   const openTasks = tasks.filter((t) => !t.done).length;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="dashboard-focus grid gap-4 md:grid-cols-3">
       <StatCard
         title="Weighted pipeline"
         value={formatEur(Math.round(weightedPipeline))}
-        hint="Probability-adjusted across open stages."
+        hint="Fantasy meets spreadsheets — probability-adjusted."
         icon={TrendingUp}
-        trend={{ label: `${openPipeline.length} active deals`, positive: true }}
+        trend={{
+          label: `${openPipeline.length} deals still pretending closure is "soon"`,
+          positive: true,
+        }}
+        className="border-white/[0.05]"
       />
       <StatCard
-        title="Portfolio fees (EUR)"
+        title="Retainers & fees"
         value={formatEur(
           customers.reduce((s, c) => s + (c.feeEur ?? 0), 0),
         )}
-        hint={`${customers.length} customer record${customers.length === 1 ? "" : "s"} · contract fees`}
+        hint={`${customers.length} relationship${customers.length === 1 ? "" : "s"} bankrolling Wi-Fi`}
         icon={Users}
+        trend={{ label: "Recurring beats heroic", positive: true }}
+        className="border-white/[0.05]"
       />
       <StatCard
-        title="Qualified leads"
-        value={`${leads.filter((l) => l.stage === "qualified").length}/${leads.length}`}
-        hint="Marketing → Sales handoffs."
-        icon={Sparkles}
-        trend={{ label: "Sync leads table in Supabase", positive: true }}
-      />
-      <StatCard
-        title="Follow-ups due"
+        title="Open loops"
         value={`${openTasks}`}
-        hint="Tasks still marked incomplete."
+        hint="Still yours until the checkbox says otherwise."
         icon={ListTodo}
-        trend={{ label: "Assign owners from Tasks module", positive: false }}
+        trend={{ label: "Done beats perfect", positive: true }}
+        className="border-white/[0.05]"
       />
     </div>
   );
@@ -60,6 +60,6 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const FourTiles: Story = {
+export const ThreeTiles: Story = {
   render: () => <DashboardStatsDemo />,
 };

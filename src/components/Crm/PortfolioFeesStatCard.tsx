@@ -12,10 +12,12 @@ export function PortfolioFeesStatCard() {
 
   return (
     <StatCard
-      title="Portfolio fees (EUR)"
+      title="Retainers & fees"
       value={formatEur(total)}
-      hint={`${customers.length} customer record${customers.length === 1 ? "" : "s"} · contract fees`}
+      hint={`${customers.length} relationship${customers.length === 1 ? "" : "s"} bankrolling Wi-Fi`}
       icon={Users}
+      trend={{ label: "Recurring beats heroic", positive: true }}
+      className="border-white/[0.05]"
     />
   );
 }

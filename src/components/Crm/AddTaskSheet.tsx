@@ -15,6 +15,7 @@ import {
   SheetTrigger,
 } from "@/components/Ui/Sheet";
 import { cn } from "@/lib/utils";
+import type { TaskRelatedKind } from "@/lib/crm/types";
 
 import {
   TASK_PRIORITY_OPTIONS,
@@ -22,13 +23,15 @@ import {
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
 } from "./TaskFormShared";
+import { TaskRelatedFields } from "./TaskRelatedFields";
 import { useTasks } from "./TasksContext";
 
 export function AddTaskSheet() {
   const { addTask } = useTasks();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const [relatedTo, setRelatedTo] = useState("");
+  const [relatedKind, setRelatedKind] = useState<TaskRelatedKind>("none");
+  const [relatedId, setRelatedId] = useState<string | null>(null);
   const [dueLocal, setDueLocal] = useState(() =>
     toDatetimeLocalValue(defaultDueIso()),
   );
@@ -39,7 +42,8 @@ export function AddTaskSheet() {
 
   const reset = useCallback(() => {
     setTitle("");
-    setRelatedTo("");
+    setRelatedKind("none");
+    setRelatedId(null);
     setDueLocal(toDatetimeLocalValue(defaultDueIso()));
     setPriority("medium");
     setAssignee("");
@@ -72,9 +76,15 @@ export function AddTaskSheet() {
       return;
     }
 
+    if (relatedKind !== "none" && !relatedId?.trim()) {
+      setError("Pick what this task is linked to, or choose General.");
+      return;
+    }
+
     addTask({
       title: trimmed,
-      relatedTo,
+      relatedKind,
+      relatedId: relatedKind === "none" ? null : relatedId,
       dueAt: dueIso,
       priority,
       assignee,
@@ -86,7 +96,8 @@ export function AddTaskSheet() {
     dueLocal,
     handleOpenChange,
     priority,
-    relatedTo,
+    relatedId,
+    relatedKind,
     title,
   ]);
 
@@ -129,22 +140,12 @@ export function AddTaskSheet() {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label
-              htmlFor="task-related"
-              className="text-muted-foreground text-xs font-medium"
-            >
-              Related to
-            </label>
-            <Input
-              id="task-related"
-              value={relatedTo}
-              onChange={(e) => setRelatedTo(e.target.value)}
-              placeholder="Deal · Customer · Lead…"
-              className="h-10 rounded-none border-white/[0.08] bg-[color-mix(in_oklab,var(--card)_55%,transparent)]"
-              autoComplete="off"
-            />
-          </div>
+          <TaskRelatedFields
+            relatedKind={relatedKind}
+            relatedId={relatedId}
+            onRelatedKindChange={setRelatedKind}
+            onRelatedIdChange={setRelatedId}
+          />
 
           <div className="space-y-2">
             <span className="text-muted-foreground text-xs font-medium">

@@ -11,9 +11,11 @@ import {
 } from "react";
 
 import { deals as seedDeals } from "@/lib/crm/mock-data";
-import type { Deal, DealStage } from "@/lib/crm/types";
+import type { Deal, DealPricingModel, DealStage } from "@/lib/crm/types";
 
-const STORAGE_KEY = "crm-deals-v1";
+import { useCompanies } from "./CompaniesContext";
+
+const STORAGE_KEY = "crm-deals-v2";
 
 export type NewDealInput = {
   title: string;
@@ -23,6 +25,9 @@ export type NewDealInput = {
   probability: number;
   closeDate: string;
   owner: string;
+  serviceLine?: string | null;
+  dealScope?: string | null;
+  pricingModel?: DealPricingModel | null;
 };
 
 function loadStored(): Deal[] | null {
@@ -50,6 +55,7 @@ type DealsContextValue = {
 const DealsContext = createContext<DealsContextValue | null>(null);
 
 export function DealsProvider({ children }: { children: ReactNode }) {
+  const { ensureCompanyByName } = useCompanies();
   const [deals, setDeals] = useState<Deal[]>(seedDeals);
   const [hydrated, setHydrated] = useState(false);
 
@@ -58,6 +64,8 @@ export function DealsProvider({ children }: { children: ReactNode }) {
       const stored = loadStored();
       if (stored && stored.length > 0) {
         setDeals(stored);
+      } else {
+        setDeals(seedDeals);
       }
       setHydrated(true);
     });
@@ -68,33 +76,42 @@ export function DealsProvider({ children }: { children: ReactNode }) {
     persist(deals);
   }, [deals, hydrated]);
 
-  const addDeal = useCallback((input: NewDealInput) => {
-    const title = input.title.trim();
-    const company = input.company.trim();
-    const id =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `d-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const valueEur = Number.isFinite(input.valueEur) ? Math.max(0, input.valueEur) : 0;
-    let probability = Math.round(input.probability);
-    probability = Math.min(100, Math.max(0, probability));
-    const closeDate =
-      input.closeDate.trim() ||
-      new Date().toISOString().slice(0, 10);
+  const addDeal = useCallback(
+    (input: NewDealInput) => {
+      const title = input.title.trim();
+      const companyLabel = input.company.trim();
+      const companyId = ensureCompanyByName(companyLabel);
+      const id =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `d-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const valueEur = Number.isFinite(input.valueEur)
+        ? Math.max(0, input.valueEur)
+        : 0;
+      let probability = Math.round(input.probability);
+      probability = Math.min(100, Math.max(0, probability));
+      const closeDate =
+        input.closeDate.trim() || new Date().toISOString().slice(0, 10);
 
-    const deal: Deal = {
-      id,
-      title,
-      company,
-      stage: input.stage,
-      valueEur,
-      probability,
-      closeDate,
-      owner: input.owner.trim() || "You",
-    };
-    setDeals((prev) => [...prev, deal]);
-    return deal;
-  }, []);
+      const deal: Deal = {
+        id,
+        companyId,
+        company: companyLabel,
+        title,
+        stage: input.stage,
+        valueEur,
+        probability,
+        closeDate,
+        owner: input.owner.trim() || "You",
+        serviceLine: input.serviceLine?.trim() || null,
+        dealScope: input.dealScope?.trim() || null,
+        pricingModel: input.pricingModel ?? null,
+      };
+      setDeals((prev) => [...prev, deal]);
+      return deal;
+    },
+    [ensureCompanyByName],
+  );
 
   const value = useMemo(
     () => ({

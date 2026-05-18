@@ -13,9 +13,14 @@ import { useMemo } from "react";
 
 import { Badge } from "@/components/Ui/Badge";
 import { buttonVariants } from "@/components/Ui/Button";
+import { formatTaskRelatedLine } from "@/lib/crm/task-related-label";
 import { cn } from "@/lib/utils";
 import type { Task, TaskPriority } from "@/lib/crm/types";
 
+import { useCompanies } from "./CompaniesContext";
+import { useContacts } from "./ContactsContext";
+import { useDeals } from "./DealsContext";
+import { useLeads } from "./LeadsContext";
 import { useTasks } from "./TasksContext";
 
 function priorityWeight(p: TaskPriority): number {
@@ -81,7 +86,21 @@ function SpotlightCard({
   rank: number;
 }) {
   const ps = priorityStyles(task.priority);
-  const labels = ["Today", "Next", "Then"] as const;
+  const labels = ["Ship first", "Then", "Fine, fine"] as const;
+  const { deals } = useDeals();
+  const { companies } = useCompanies();
+  const { leads } = useLeads();
+  const { contacts } = useContacts();
+  const relatedLine = useMemo(
+    () =>
+      formatTaskRelatedLine(task, {
+        deals,
+        companies,
+        leads,
+        contacts,
+      }),
+    [task, deals, companies, leads, contacts],
+  );
 
   return (
     <article
@@ -131,7 +150,7 @@ function SpotlightCard({
         {task.title}
       </h3>
       <p className="text-muted-foreground relative mt-2 line-clamp-1 text-xs">
-        {task.relatedTo}
+        {relatedLine}
       </p>
       <div className="relative mt-4 flex items-center justify-between border-t border-white/[0.06] pt-3 text-[11px] text-muted-foreground">
         <span className="truncate">{task.assignee}</span>
@@ -143,6 +162,20 @@ function SpotlightCard({
 
 function RunnerRow({ task, index }: { task: Task; index: number }) {
   const ps = priorityStyles(task.priority);
+  const { deals } = useDeals();
+  const { companies } = useCompanies();
+  const { leads } = useLeads();
+  const { contacts } = useContacts();
+  const relatedLine = useMemo(
+    () =>
+      formatTaskRelatedLine(task, {
+        deals,
+        companies,
+        leads,
+        contacts,
+      }),
+    [task, deals, companies, leads, contacts],
+  );
 
   return (
     <div
@@ -165,6 +198,9 @@ function RunnerRow({ task, index }: { task: Task; index: number }) {
             {ps.label}
           </span>
           <span className="tabular-nums">{formatDueCompact(task.dueAt)}</span>
+          <span className="max-w-[min(100%,14rem)] truncate" title={relatedLine}>
+            · {relatedLine}
+          </span>
           <span className="truncate">· {task.assignee}</span>
         </div>
       </div>
@@ -181,30 +217,30 @@ export function DashboardPrioritiesSection() {
 
   return (
     <section
-      className="relative overflow-hidden rounded-none border border-white/[0.07] bg-[color-mix(in_oklab,var(--card)_75%,transparent)] shadow-[inset_0_1px_0_0_rgb(255_255_255/0.06)] backdrop-blur-xl"
+      className="relative overflow-hidden rounded-none border border-white/[0.05] bg-[color-mix(in_oklab,var(--card)_62%,transparent)] shadow-[inset_0_1px_0_0_rgb(255_255_255/0.04)] backdrop-blur-xl"
       aria-labelledby="dashboard-priorities-heading"
     >
-      <div className="relative border-b border-white/[0.06] px-5 py-6 sm:px-8 sm:py-7">
+      <div className="relative border-b border-white/[0.05] px-5 py-6 sm:px-8 sm:py-7">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-primary/15 text-primary inline-flex items-center gap-1.5 rounded-none px-3 py-1 text-[10px] font-bold tracking-[0.2em] uppercase ring-1 ring-primary/25">
+              <span className="bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-none px-3 py-1 text-[10px] font-bold tracking-[0.2em] uppercase ring-1 ring-primary/18">
                 <Target className="size-3.5" aria-hidden />
-                Focus
+                Execute
               </span>
               <span className="text-muted-foreground text-[11px] font-medium tracking-wide">
-                Top 3 highlighted · 7 total slots
+                Three that matter · seven max before chaos
               </span>
             </div>
             <h2
               id="dashboard-priorities-heading"
               className="text-foreground max-w-xl text-2xl font-semibold tracking-tight sm:text-3xl sm:leading-tight"
             >
-              Main priorities
+              Three things before lunch
             </h2>
             <p className="text-muted-foreground max-w-lg text-sm leading-relaxed sm:text-[15px]">
-              The seven most urgent open tasks, ranked by priority, then due
-              time. Clear the top three first; momentum compounds.
+              Seven slots max — ranked by how loud they scream. Eat the frog(s).
+              Your LinkedIn scroll can wait; dinner rent cannot.
             </p>
           </div>
           <Link
@@ -214,7 +250,7 @@ export function DashboardPrioritiesSection() {
               "gap-1.5",
             )}
           >
-            Task board
+            Full board
             <ArrowRight className="size-4" aria-hidden />
           </Link>
         </div>
@@ -227,11 +263,11 @@ export function DashboardPrioritiesSection() {
               <Layers className="size-7" aria-hidden />
             </div>
             <p className="text-lg font-semibold tracking-tight">
-              Inbox zero on priorities
+              Nothing to dodge — sus, but okay
             </p>
             <p className="text-muted-foreground max-w-sm text-sm">
-              No open tasks, add follow-ups from the Tasks module to populate
-              this lane.
+              Either you shipped everything or you forgot to log work. Both
+              happen. Add tasks when reality returns.
             </p>
             <Link
               href="/tasks"
@@ -246,7 +282,7 @@ export function DashboardPrioritiesSection() {
             <div className="mb-3 flex items-center gap-2">
               <Flame className="size-4 text-rose-400/90" aria-hidden />
               <span className="text-muted-foreground text-[11px] font-semibold tracking-[0.18em] uppercase">
-                Spotlight trio
+                The rent-payers
               </span>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
@@ -260,10 +296,10 @@ export function DashboardPrioritiesSection() {
                       className="flex min-h-[200px] flex-col items-center justify-center rounded-none border border-dashed border-white/[0.08] bg-white/[0.02] px-4 text-center"
                     >
                       <p className="text-muted-foreground text-sm font-medium">
-                        Slot open
+                        Open slot — rare
                       </p>
                       <p className="text-muted-foreground/70 mt-1 text-xs">
-                        Add a task to fill this spotlight
+                        Steal time back or add something worth doing
                       </p>
                     </div>
                   ))
@@ -275,7 +311,7 @@ export function DashboardPrioritiesSection() {
                 <div className="mt-10 mb-3 flex items-center gap-2">
                   <Layers className="text-muted-foreground size-4" aria-hidden />
                   <span className="text-muted-foreground text-[11px] font-semibold tracking-[0.18em] uppercase">
-                    Next up ({runners.length})
+                    Guilt pile ({runners.length})
                   </span>
                 </div>
                 <ul className="grid list-none gap-2 p-0 sm:grid-cols-2">

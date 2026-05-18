@@ -11,13 +11,14 @@ import {
 } from "react";
 
 import { tasks as seedTasks } from "@/lib/crm/mock-data";
-import type { Task, TaskPriority } from "@/lib/crm/types";
+import type { Task, TaskPriority, TaskRelatedKind } from "@/lib/crm/types";
 
-const STORAGE_KEY = "crm-tasks-v1";
+const STORAGE_KEY = "crm-tasks-v2";
 
 export type NewTaskInput = {
   title: string;
-  relatedTo: string;
+  relatedKind: TaskRelatedKind;
+  relatedId: string | null;
   dueAt: string;
   priority: TaskPriority;
   assignee: string;
@@ -61,6 +62,8 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       const stored = loadStored();
       if (stored && stored.length > 0) {
         setTasks(stored);
+      } else {
+        setTasks(seedTasks);
       }
       setHydrated(true);
     });
@@ -78,10 +81,19 @@ export function TasksProvider({ children }: { children: ReactNode }) {
         ? crypto.randomUUID()
         : `t-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+    const rk = input.relatedKind;
+    const rid =
+      rk === "none"
+        ? null
+        : input.relatedId && input.relatedId.trim()
+          ? input.relatedId.trim()
+          : null;
+
     const task: Task = {
       id,
       title,
-      relatedTo: input.relatedTo.trim() || "General",
+      relatedKind: rk === "none" ? "none" : rk,
+      relatedId: rk === "none" ? null : rid,
       dueAt: input.dueAt,
       priority: input.priority,
       done: false,

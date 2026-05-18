@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import {
   CheckSquare,
   CreditCard,
+  Crosshair,
+  FolderKanban,
   KanbanSquare,
   LayoutDashboard,
   UserPlus,
@@ -20,7 +22,9 @@ const nav = [
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/leads", label: "Leads", icon: UserPlus },
   { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
+  { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
+  { href: "/goals", label: "Goals", icon: Crosshair },
   { href: "/pricing", label: "Subscription", icon: CreditCard },
   { href: "/profile", label: "Profile", icon: UserRound },
 ] as const;
