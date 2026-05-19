@@ -289,7 +289,7 @@ export function AddDealSheet() {
                 inputMode="numeric"
                 value={probability}
                 onChange={(e) => setProbability(e.target.value)}
-                placeholder="0–100"
+                placeholder="0-100"
                 className="h-10 rounded-none border-white/[0.08] bg-[color-mix(in_oklab,var(--card)_55%,transparent)] tabular-nums"
                 autoComplete="off"
               />

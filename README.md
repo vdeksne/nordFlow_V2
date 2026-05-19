@@ -14,7 +14,7 @@ The root route redirects to **`/dashboard`**.
 | **Customers** | Table / responsive cards, detail sheets, **CSV import** (Papa Parse) |
 | **Leads & pipeline** | Add/edit flows with contextual providers |
 | **Tasks** | Focus board with priorities and momentum UI |
-| **Auth (preview)** | `/login` and `/register` UI (mock; no real sessions) |
+| **Auth** | `/login` & `/register` store users in **Neon** (`app_users`) when `DATABASE_URL` + `AUTH_SECRET` are set; JWT cookie sessions |
 | **AI assistant (preview)** | Floating dock + sheet (⌘K / Ctrl+K), canned “next revenue move” style replies |
 | **Storybook** | Component docs and isolated previews |
 
@@ -34,7 +34,21 @@ The root route redirects to **`/dashboard`**.
 | **Bundler (dev)** | Turbopack via `next dev` |
 | **Fonts** | [Figtree](https://fonts.google.com/specimen/Figtree) via `next/font/google` |
 
-**Optional / scaffold:** [`@supabase/supabase-js`](https://supabase.com/docs/reference/javascript) is listed as a dependency with a small client helper (`src/lib/supabase/client.ts`) for future backend wiring; the current CRM demo does not require Supabase env vars to run.
+**Optional / scaffold:** [`@supabase/supabase-js`](https://supabase.com/docs/reference/javascript) remains available via `src/lib/supabase/client.ts` if you later add Supabase; credential login for this repo uses **Neon + bcrypt + JWT cookies** instead.
+
+---
+
+## Credential auth (Neon)
+
+When **`DATABASE_URL`** and **`AUTH_SECRET`** (32+ characters) are present in `.env.local`:
+
+1. Open the Neon SQL editor and run **`db/auth-schema.sql`** (creates `public.app_users`).
+2. Generate a secret, for example: `openssl rand -base64 32`.
+3. Use **`/register`** to create an account and **`/login`** to sign in. Successful responses set an HTTP-only session cookie (`nordflow_session`).
+
+Middleware then requires a valid session for all CRM routes except the home redirect and auth pages. If those env vars are missing, the CRM stays **demo-open** so local hacking works without a database.
+
+API routes: `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `GET /api/auth/status`.
 
 ---
 

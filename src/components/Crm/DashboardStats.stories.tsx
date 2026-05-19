@@ -20,7 +20,7 @@ function DashboardStatsDemo() {
       <StatCard
         title="Weighted pipeline"
         value={formatEur(Math.round(weightedPipeline))}
-        hint="Fantasy meets spreadsheets — probability-adjusted."
+        hint="Fantasy meets spreadsheets - probability-adjusted."
         icon={TrendingUp}
         trend={{
           label: `${openPipeline.length} deals still pretending closure is "soon"`,

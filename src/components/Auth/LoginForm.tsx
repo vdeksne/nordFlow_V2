@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { NordflowLogo } from "@/components/Crm/NordflowLogo";
 import { Button } from "@/components/Ui/Button";
@@ -21,14 +20,74 @@ const fieldClass = cn(
   "dark:bg-[color-mix(in_oklab,var(--secondary)_65%,transparent)]",
 );
 
-export function LoginForm({ className }: { className?: string }) {
-  const router = useRouter();
-  const [phase, setPhase] = useState<"form" | "preview">("form");
+type LoginFormProps = {
+  className?: string;
+  redirectTo?: string;
+};
 
-  const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setPhase("preview");
+export function LoginForm({
+  className,
+  redirectTo = "/dashboard",
+}: LoginFormProps) {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [credentialAuthEnabled, setCredentialAuthEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/auth/status")
+      .then((r) => r.json())
+      .then((data: { credentialAuthEnabled?: boolean }) => {
+        if (!cancelled) setCredentialAuthEnabled(Boolean(data.credentialAuthEnabled));
+      })
+      .catch(() => {
+        if (!cancelled) setCredentialAuthEnabled(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      setError(null);
+      setLoading(true);
+
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            email: email.trim(),
+            password,
+          }),
+        });
+
+        const data = (await res.json()) as {
+          ok?: boolean;
+          error?: string;
+        };
+
+        if (!res.ok || !data.ok) {
+          setError(data.error ?? "Sign-in failed.");
+          return;
+        }
+
+        router.push(redirectTo);
+        router.refresh();
+      } catch {
+        setError("Network error. Try again.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [email, password, redirectTo, router],
+  );
 
   return (
     <div className={cn("mx-auto w-full max-w-[340px]", className)}>
@@ -48,120 +107,110 @@ export function LoginForm({ className }: { className?: string }) {
           Sign in
         </p>
         <h1 className="text-foreground text-[1.65rem] font-medium tracking-[-0.03em] sm:text-3xl">
-          {phase === "form" ? "Welcome back" : "Ready"}
+          Welcome back
         </h1>
         <p className="text-muted-foreground pt-2 text-[13px] leading-relaxed">
-          {phase === "form"
-            ? "UI-only preview. Connect your auth provider later."
-            : "Credentials would post here in production."}
+          {credentialAuthEnabled
+            ? "Sign in with the email and password you registered."
+            : "Demo mode: add DATABASE_URL and AUTH_SECRET (32+ chars), run db/auth-schema.sql in Neon, then sign in."}
         </p>
       </div>
 
-      {phase === "preview" ? (
-        <div className="mt-12 space-y-6">
-          <p className="text-foreground/90 border-l-2 border-primary/50 pl-4 text-sm leading-relaxed">
-            Mock login, no data sent. Plug in Supabase Auth, Clerk, or Auth0.
+      <form className="mt-12 space-y-8" onSubmit={handleSubmit}>
+        {error ? (
+          <p
+            className="border border-rose-400/25 bg-rose-500/[0.08] px-3 py-2 text-[13px] leading-snug text-rose-100"
+            role="alert"
+          >
+            {error}
           </p>
-          <Button
-            type="button"
-            variant="solid"
-            size="lg"
-            className="h-12 w-full gap-2 text-[13px]"
-            onClick={() => router.push("/dashboard")}
-          >
-            Continue
-            <ArrowRight className="size-4 opacity-90" aria-hidden />
-          </Button>
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-foreground w-full text-center text-[13px] transition-colors"
-            onClick={() => setPhase("form")}
-          >
-            Back
-          </button>
-        </div>
-      ) : (
-        <form className="mt-12 space-y-8" onSubmit={handleSubmit}>
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label htmlFor="login-email" className="sr-only">
-                Email
-              </label>
-              <Input
-                id="login-email"
-                type="email"
-                autoComplete="email"
-                placeholder="Email"
-                className={fieldClass}
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="login-password" className="sr-only">
-                Password
-              </label>
-              <Input
-                id="login-password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="Password"
-                className={fieldClass}
-              />
-            </div>
-          </div>
+        ) : null}
 
-          <div className="flex items-center justify-between gap-3 text-[13px]">
-            <label className="text-muted-foreground flex cursor-pointer items-center gap-2.5">
-              <input
-                type="checkbox"
-                className="border-white/15 accent-primary size-3.5 rounded-none border bg-transparent"
-              />
-              <span>Remember</span>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label htmlFor="login-email" className="sr-only">
+              Email
             </label>
-            <button
-              type="button"
-              className="text-muted-foreground hover:text-primary transition-colors"
-            >
-              Forgot?
-            </button>
+            <Input
+              id="login-email"
+              type="email"
+              autoComplete="email"
+              placeholder="Email"
+              required
+              value={email}
+              onChange={(ev) => setEmail(ev.target.value)}
+              disabled={loading}
+              className={fieldClass}
+            />
           </div>
+          <div className="space-y-2">
+            <label htmlFor="login-password" className="sr-only">
+              Password
+            </label>
+            <Input
+              id="login-password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Password"
+              required
+              value={password}
+              onChange={(ev) => setPassword(ev.target.value)}
+              disabled={loading}
+              className={fieldClass}
+            />
+          </div>
+        </div>
 
+        <div className="flex items-center justify-between gap-3 text-[13px]">
+          <label className="text-muted-foreground flex cursor-pointer items-center gap-2.5">
+            <input
+              type="checkbox"
+              className="border-white/15 accent-primary size-3.5 rounded-none border bg-transparent"
+            />
+            <span>Remember</span>
+          </label>
+          <span className="text-muted-foreground">Forgot password?</span>
+        </div>
+
+        <Button
+          type="submit"
+          variant="solid"
+          size="lg"
+          className="h-12 w-full text-[13px]"
+          disabled={loading}
+        >
+          {loading ? "Signing in…" : "Continue"}
+        </Button>
+
+        <div className="flex items-center gap-4 pt-2">
+          <span className="bg-white/[0.06] h-px flex-1" />
+          <span className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">
+            Or
+          </span>
+          <span className="bg-white/[0.06] h-px flex-1" />
+        </div>
+
+        <div className="flex gap-3">
           <Button
-            type="submit"
-            variant="solid"
-            size="lg"
-            className="h-12 w-full text-[13px]"
+            type="button"
+            variant="secondary"
+            disabled
+            title="Google sign-in is not configured in this build."
+            className="text-muted-foreground h-11 flex-1 cursor-not-allowed border-white/[0.12] bg-transparent text-[13px] font-normal normal-case tracking-normal opacity-60"
           >
-            Continue
+            Google
           </Button>
-
-          <div className="flex items-center gap-4 pt-2">
-            <span className="bg-white/[0.06] h-px flex-1" />
-            <span className="text-muted-foreground text-[11px] tracking-[0.2em] uppercase">
-              Or
-            </span>
-            <span className="bg-white/[0.06] h-px flex-1" />
-          </div>
-
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="secondary"
-              className="text-muted-foreground hover:text-foreground h-11 flex-1 border-white/[0.12] bg-transparent text-[13px] font-normal normal-case tracking-normal"
-              onClick={() => setPhase("preview")}
-            >
-              Google
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              className="text-muted-foreground hover:text-foreground h-11 flex-1 border-white/[0.12] bg-transparent text-[13px] font-normal normal-case tracking-normal"
-              onClick={() => setPhase("preview")}
-            >
-              Microsoft
-            </Button>
-          </div>
-        </form>
-      )}
+          <Button
+            type="button"
+            variant="secondary"
+            disabled
+            title="Microsoft sign-in is not configured in this build."
+            className="text-muted-foreground h-11 flex-1 cursor-not-allowed border-white/[0.12] bg-transparent text-[13px] font-normal normal-case tracking-normal opacity-60"
+          >
+            Microsoft
+          </Button>
+        </div>
+      </form>
 
       <p className="text-muted-foreground mt-14 text-center text-[13px]">
         <Link
@@ -180,11 +229,20 @@ export function LoginForm({ className }: { className?: string }) {
         </Link>
       </p>
 
-      <p className="text-muted-foreground/70 mt-8 text-center text-[11px]">
-        <Link href="/dashboard" className="transition-colors hover:text-foreground">
-          Skip to dashboard
-        </Link>
-      </p>
+      {!credentialAuthEnabled ? (
+        <p className="text-muted-foreground/70 mt-8 text-center text-[11px]">
+          <Link
+            href="/dashboard"
+            className="transition-colors hover:text-foreground"
+          >
+            Skip setup → Dashboard (demo)
+          </Link>
+        </p>
+      ) : (
+        <p className="text-muted-foreground/70 mt-8 text-center text-[11px]">
+          Workspace routes require an account once auth env vars are set.
+        </p>
+      )}
     </div>
   );
 }

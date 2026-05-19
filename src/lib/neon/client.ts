@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 
 /**
- * Neon HTTP driver — use from Server Components, Route Handlers, or server actions.
+ * Neon HTTP driver - use from Server Components, Route Handlers, or server actions.
  * Set `DATABASE_URL` in `.env.local` (Neon pooled connection string).
  */
 export function getNeonSql() {

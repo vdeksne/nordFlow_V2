@@ -50,7 +50,7 @@
 }
 
 :root {
-  /* Near-black blue + luminous teal — editorial / luxury contrast */
+  /* Near-black blue + luminous teal - editorial / luxury contrast */
   --background: #01040d;
   --foreground: #e8edf7;
   --card: #050b18;
@@ -142,7 +142,7 @@
   }
 }
 
-/* Freelancer dashboard — deeper ink on cards inside this subtree */
+/* Freelancer dashboard - deeper ink on cards inside this subtree */
 .dashboard-focus {
   --card: #020508;
   --popover: #030a12;

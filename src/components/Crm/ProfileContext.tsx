@@ -36,6 +36,21 @@ export function normalizeAdminInitials(raw: string): string {
   return "NF";
 }
 
+function initialsFromAuthSession(name: string, email: string): string {
+  const n = name.trim();
+  if (n) {
+    const parts = n.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return normalizeAdminInitials(
+        `${parts[0].charAt(0)}${parts[parts.length - 1]?.charAt(0) ?? ""}`,
+      );
+    }
+    return normalizeAdminInitials(parts[0]?.slice(0, 2) ?? "");
+  }
+  const local = email.split("@")[0] ?? "";
+  return normalizeAdminInitials(local.slice(0, 2));
+}
+
 function loadStored(): AdminProfile | null {
   if (typeof window === "undefined") return null;
   try {
@@ -83,6 +98,30 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       setHydrated(true);
     });
   }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    let cancelled = false;
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { user?: { email: string; name: string } } | null) => {
+        if (cancelled || !data?.user) return;
+        setProfile((prev) => ({
+          ...prev,
+          displayName:
+            data.user!.name?.trim() || prev.displayName,
+          email: data.user!.email || prev.email,
+          initials: initialsFromAuthSession(
+            data.user!.name ?? "",
+            data.user!.email,
+          ),
+        }));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;

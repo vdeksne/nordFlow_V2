@@ -25,7 +25,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/Ui/Card";
-import type { Goal, GoalArea } from "@/lib/crm/types";
+import { GOAL_AREA_ORDER, goalAreaDomain } from "@/lib/crm/goal-areas";
+import type { Goal, GoalArea, GoalHorizon } from "@/lib/crm/types";
 
 const CHART_TOOLTIP =
   "border-sidebar-border z-50 max-w-[220px] rounded-xl border border-white/[0.1] bg-[color-mix(in_oklab,var(--popover)_94%,transparent)] px-3 py-2.5 text-xs shadow-xl backdrop-blur-xl";
@@ -38,32 +39,37 @@ const CHART_COLORS = [
   "var(--chart-5)",
 ] as const;
 
-const AREA_ORDER: GoalArea[] = [
-  "revenue",
-  "delivery",
-  "growth",
-  "health",
-  "learning",
-  "relationships",
+const HORIZON_BAR_ORDER: { horizon: GoalHorizon; name: string }[] = [
+  { horizon: "short_term", name: "Short-term" },
+  { horizon: "long_term", name: "Strategic" },
+  { horizon: "vision_5", name: "5-yr vision" },
+  { horizon: "vision_10", name: "10-yr vision" },
+  { horizon: "vision_20", name: "20-yr vision" },
 ];
 
-function pillarLabel(area: GoalArea): string {
-  switch (area) {
-    case "revenue":
-      return "Revenue";
-    case "delivery":
-      return "Delivery";
-    case "growth":
-      return "Growth";
-    case "health":
-      return "Health";
-    case "learning":
-      return "Learning";
-    case "relationships":
-      return "Relations";
-    default:
-      return area;
+function barHueForHorizon(h: GoalHorizon): string {
+  switch (h) {
+    case "short_term":
+      return CHART_COLORS[0];
+    case "long_term":
+      return CHART_COLORS[2];
+    case "vision_5":
+      return CHART_COLORS[1];
+    case "vision_10":
+      return CHART_COLORS[3];
+    case "vision_20":
+      return CHART_COLORS[4];
+    default: {
+      const _never: never = h;
+      return _never;
+    }
   }
+}
+
+const AREA_ORDER: GoalArea[] = GOAL_AREA_ORDER;
+
+function pillarLabel(area: GoalArea): string {
+  return goalAreaDomain(area);
 }
 
 function avgProgressInArea(goals: Goal[], area: GoalArea): number {
@@ -118,30 +124,21 @@ export function GoalsCharts({ goals }: GoalsChartsProps) {
   }, [goals]);
 
   const horizonData = useMemo(() => {
-    const short = goals.filter(
-      (g) => g.horizon === "short_term" && g.status === "active",
-    );
-    const long = goals.filter(
-      (g) => g.horizon === "long_term" && g.status === "active",
-    );
-    return [
-      {
-        name: "Short-term",
-        avg: short.length
+    return HORIZON_BAR_ORDER.map(({ horizon, name }) => {
+      const lane = goals.filter(
+        (g) => g.horizon === horizon && g.status === "active",
+      );
+      return {
+        name,
+        horizon,
+        avg: lane.length
           ? Math.round(
-              short.reduce((s, g) => s + g.progress, 0) / short.length,
+              lane.reduce((s, g) => s + g.progress, 0) / lane.length,
             )
           : 0,
-        n: short.length,
-      },
-      {
-        name: "Long-term",
-        avg: long.length
-          ? Math.round(long.reduce((s, g) => s + g.progress, 0) / long.length)
-          : 0,
-        n: long.length,
-      },
-    ];
+        n: lane.length,
+      };
+    });
   }, [goals]);
 
   const rankedBars = useMemo(() => {
@@ -153,8 +150,7 @@ export function GoalsCharts({ goals }: GoalsChartsProps) {
         label:
           g.title.length > 36 ? `${g.title.slice(0, 34)}…` : g.title,
         progress: g.progress,
-        fill:
-          g.horizon === "short_term" ? CHART_COLORS[0] : CHART_COLORS[2],
+        fill: barHueForHorizon(g.horizon),
       }));
   }, [activeGoals]);
 
@@ -168,8 +164,8 @@ export function GoalsCharts({ goals }: GoalsChartsProps) {
         aria-label="Goal charts"
       >
         <p className="text-muted-foreground text-sm">
-          Charts light up once you have goals — add a short-term win or a
-          long-term north star.
+          Charts light up once you have goals across any horizon — execution,
+          strategy, or 5–20 year vision arcs.
         </p>
       </section>
     );
@@ -202,17 +198,17 @@ export function GoalsCharts({ goals }: GoalsChartsProps) {
         <Card className="border-white/[0.06] bg-[color-mix(in_oklab,var(--card)_65%,transparent)] backdrop-blur-md xl:col-span-5">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold">
-              Pillar balance
+              Domain balance
             </CardTitle>
             <CardDescription>
-              Mean progress on active goals by life / business area — where
-              you&apos;re investing attention.
+              Mean progress on active goals across life domains — self, work,
+              money, relationships, meaning, and body.
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[min(52vw,280px)] min-h-[240px] pt-2 pb-4">
             {activeGoals.length === 0 ? (
               <p className="text-muted-foreground flex h-full items-center justify-center text-sm">
-                No active goals — complete or unarchive to see the wheel.
+                No active goals - complete or unarchive to see the wheel.
               </p>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -271,7 +267,7 @@ export function GoalsCharts({ goals }: GoalsChartsProps) {
               Attention queue
             </CardTitle>
             <CardDescription>
-              Active goals ranked by progress — lowest first, so nothing quiet
+              Active goals ranked by progress - lowest first, so nothing quiet
               slips.
             </CardDescription>
           </CardHeader>
@@ -339,7 +335,7 @@ export function GoalsCharts({ goals }: GoalsChartsProps) {
               Status mix
             </CardTitle>
             <CardDescription>
-              Portfolio of outcomes — archive without guilt, complete with
+              Portfolio of outcomes - archive without guilt, complete with
               ceremony.
             </CardDescription>
           </CardHeader>
@@ -403,18 +399,23 @@ export function GoalsCharts({ goals }: GoalsChartsProps) {
               Horizon pulse
             </CardTitle>
             <CardDescription>
-              Mean progress on active goals — short-term execution vs long-term
-              bets. Tooltip shows headcount per lane.
+              Mean progress on active goals across every horizon lane —
+              execution through strategic and 5–20 year vision rows. Tooltip
+              shows headcount per lane.
             </CardDescription>
           </CardHeader>
-          <CardContent className="h-[140px] pt-2 pb-4">
+          <CardContent className="h-[140px] min-h-[180px] pt-2 pb-4 md:min-h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={horizonData}
-                margin={{ top: 12, right: 8, left: 8, bottom: 4 }}
+                margin={{ top: 12, right: 4, left: 4, bottom: 32 }}
               >
                 <XAxis
                   dataKey="name"
+                  angle={-32}
+                  textAnchor="end"
+                  interval={0}
+                  height={48}
                   tick={{
                     fill: "var(--muted-foreground)",
                     fontSize: 11,
@@ -458,9 +459,7 @@ export function GoalsCharts({ goals }: GoalsChartsProps) {
                   {horizonData.map((_, i) => (
                     <Cell
                       key={i}
-                      fill={
-                        i === 0 ? "var(--chart-1)" : "var(--chart-3)"
-                      }
+                      fill={barHueForHorizon(HORIZON_BAR_ORDER[i]!.horizon)}
                     />
                   ))}
                 </Bar>

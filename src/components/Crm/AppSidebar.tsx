@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback } from "react";
 import {
+  CalendarClock,
   CheckSquare,
   CreditCard,
   Crosshair,
@@ -19,18 +21,29 @@ import { cn } from "@/lib/utils";
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/today", label: "Today", icon: CalendarClock },
+  { href: "/goals", label: "Goals", icon: Crosshair },
+  { href: "/tasks", label: "Tasks", icon: CheckSquare },
+  { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/leads", label: "Leads", icon: UserPlus },
   { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
-  { href: "/projects", label: "Projects", icon: FolderKanban },
-  { href: "/tasks", label: "Tasks", icon: CheckSquare },
-  { href: "/goals", label: "Goals", icon: Crosshair },
-  { href: "/pricing", label: "Subscription", icon: CreditCard },
   { href: "/profile", label: "Profile", icon: UserRound },
+  { href: "/pricing", label: "Subscription", icon: CreditCard },
 ] as const;
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleSignOut = useCallback(async () => {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
+    router.push("/login");
+    router.refresh();
+  }, [router]);
 
   return (
     <aside className="border-sidebar-border bg-sidebar text-sidebar-foreground shadow-[inset_-1px_0_0_rgb(255_255_255/0.04)] flex h-full w-full flex-col border-r">
@@ -60,6 +73,7 @@ export function AppSidebar() {
           const active =
             pathname === href ||
             (href !== "/dashboard" &&
+              href !== "/today" &&
               href !== "/profile" &&
               pathname.startsWith(href));
 
@@ -86,14 +100,16 @@ export function AppSidebar() {
           <NordflowLogo className="max-h-11 max-w-[178px] xl:max-h-14 xl:max-w-[200px]" />
         </div>
         <p className="text-muted-foreground text-[11px] leading-relaxed">
-          Connect Supabase to sync accounts. MVP ships with curated demo data.
+          Credentials auth uses Neon when DATABASE_URL + AUTH_SECRET are set.
+          Otherwise this stays an open demo shell.
         </p>
-        <Link
-          href="/login"
+        <button
+          type="button"
+          onClick={() => void handleSignOut()}
           className="text-primary hover:text-primary/85 mt-3 inline-flex text-[11px] font-semibold tracking-wide transition-colors"
         >
-          Preview login →
-        </Link>
+          Sign out →
+        </button>
       </div>
     </aside>
   );

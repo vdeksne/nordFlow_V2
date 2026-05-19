@@ -58,7 +58,7 @@ export function kanbanColumns(
       return {
         id: `mo-${y}-${mo}-w${i + 1}`,
         title: `Week ${i + 1}`,
-        subtitle: `${start}–${end}`,
+        subtitle: `${start}-${end}`,
       };
     });
   }
@@ -88,22 +88,22 @@ export function kanbanColumns(
     {
       id: "day-e",
       title: "Early",
-      subtitle: "6–10",
+      subtitle: "6-10",
     },
     {
       id: "day-m",
       title: "Morning",
-      subtitle: "10–13",
+      subtitle: "10-13",
     },
     {
       id: "day-a",
       title: "Afternoon",
-      subtitle: "13–17",
+      subtitle: "13-17",
     },
     {
       id: "day-ev",
       title: "Evening",
-      subtitle: "17–22",
+      subtitle: "17-22",
     },
     {
       id: "day-flex",
@@ -113,7 +113,7 @@ export function kanbanColumns(
   ];
 }
 
-/** Which column this project belongs to for the focused period — null if outside range */
+/** Which column this project belongs to for the focused period - null if outside range */
 export function projectColumnId(
   project: Project,
   granularity: ProjectGranularity,

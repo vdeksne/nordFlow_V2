@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getNeonSql } from "@/lib/neon/client";
 
 /**
- * GET /api/db/ping — verifies Neon connectivity (server-only).
+ * GET /api/db/ping - verifies Neon connectivity (server-only).
  */
 export async function GET() {
   const sql = getNeonSql();

@@ -4,6 +4,13 @@ import { NordflowLogo } from "@/components/Crm/NordflowLogo";
 import { cn } from "@/lib/utils";
 import { BarChart3, ShieldCheck, Zap } from "lucide-react";
 
+/** Stanford commencement, 2005 - shared intro for auth. */
+const jobsQuote = {
+  line1: "Your time is limited,",
+  line2: "so don’t waste it living someone else’s life.",
+  context: "Stanford commencement address, 2005",
+} as const;
+
 const bullets = [
   {
     icon: Zap,
@@ -60,18 +67,27 @@ export function AuthMarketingPanel({
           </Link>
         </div>
 
-        <div className="relative mt-auto max-w-[min(100%,380px)] space-y-8 pt-24">
-          <div className="space-y-4">
-            <p className="text-foreground text-[clamp(2rem,4vw,2.75rem)] font-light leading-[1.08] tracking-tight">
-              Grants,
+        <div className="relative mt-auto max-w-[min(100%,420px)] space-y-8 pt-24">
+          <blockquote className="space-y-4 border-none pl-0">
+            <p className="text-foreground text-[clamp(1.85rem,3.8vw,2.65rem)] font-light leading-[1.12] tracking-tight text-pretty">
+              <span className="text-primary/90">&ldquo;</span>
+              {jobsQuote.line1}
               <br />
-              <span className="text-primary/95 font-normal">without the scramble.</span>
+              <span className="text-primary/95 font-normal">{jobsQuote.line2}</span>
+              <span className="text-primary/90">&rdquo;</span>
             </p>
+            <footer className="text-muted-foreground text-[13px] font-medium tracking-wide">
+              {" - Steve Jobs"}
+              <span className="text-muted-foreground/75 font-normal">
+                {" "}
+                · {jobsQuote.context}
+              </span>
+            </footer>
             <p className="text-muted-foreground text-[13px] leading-relaxed tracking-wide text-pretty">
-              NordFlow helps independent grant consultants automate follow-ups,
-              stay on top of deadlines, and win more work—with less inbox chaos.
+              Bring that clarity to your pipeline - NordFlow keeps follow-ups,
+              deadlines, and accounts in one calm workspace.
             </p>
-          </div>
+          </blockquote>
 
           <p className="text-muted-foreground text-[13px] leading-relaxed tracking-wide">
             <Link
@@ -81,7 +97,7 @@ export function AuthMarketingPanel({
               View pricing
             </Link>
             <span className="text-muted-foreground"> · </span>
-            Demo shell — wire billing & auth when you ship.
+            Demo shell - wire billing & auth when you ship.
           </p>
         </div>
 
@@ -92,9 +108,10 @@ export function AuthMarketingPanel({
     );
   }
 
-  const headline = "Create your NordFlow workspace";
-  const sub =
-    "Built for independent grant consultants who want follow-ups on autopilot and a pipeline that stays legible. Wire Supabase Auth or Clerk when you go live.";
+  const headlineRegisterLead =
+    "Make the hours count - build your NordFlow workspace.";
+  const subRegister =
+    "Follow-ups on autopilot, a legible pipeline, less inbox chaos. Wire Supabase Auth or Clerk when you go live.";
 
   return (
     <div
@@ -131,13 +148,32 @@ export function AuthMarketingPanel({
           <NordflowLogo priority className="max-h-28 w-auto max-w-[min(100%,360px)] xl:max-h-36 xl:max-w-[min(100%,440px)]" />
         </Link>
 
-        <div className="space-y-4">
-          <h1 className="text-foreground max-w-md text-3xl font-semibold tracking-tight text-balance lg:text-4xl lg:leading-[1.15]">
-            {headline}
-          </h1>
-          <p className="text-muted-foreground max-w-md text-base leading-relaxed">
-            {sub}
-          </p>
+        <div className="space-y-6">
+          <blockquote className="max-w-lg border-none space-y-3 pl-0">
+            <p className="text-foreground text-2xl font-light leading-snug tracking-tight text-balance lg:text-3xl lg:leading-[1.2]">
+              <span className="text-primary/90">&ldquo;</span>
+              {jobsQuote.line1}{" "}
+              <span className="text-primary/95 font-normal">
+                {jobsQuote.line2}
+              </span>
+              <span className="text-primary/90">&rdquo;</span>
+            </p>
+            <footer className="text-muted-foreground text-sm font-medium">
+              {" - Steve Jobs"}
+              <span className="text-muted-foreground/75 font-normal">
+                {" "}
+                · {jobsQuote.context}
+              </span>
+            </footer>
+          </blockquote>
+          <div className="max-w-md space-y-3">
+            <h1 className="text-foreground text-xl font-semibold tracking-tight text-balance lg:text-2xl">
+              {headlineRegisterLead}
+            </h1>
+            <p className="text-muted-foreground text-base leading-relaxed">
+              {subRegister}
+            </p>
+          </div>
         </div>
 
         <ul className="max-w-md space-y-5">

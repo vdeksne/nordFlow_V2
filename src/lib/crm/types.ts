@@ -1,4 +1,6 @@
-/** Where an inbound record originated — stored at company level. */
+import type { GoalArea } from "./goal-areas";
+
+/** Where an inbound record originated - stored at company level. */
 export type LeadSource =
   | "linkedin"
   | "referral"
@@ -33,7 +35,7 @@ export type Lead = {
   id: string;
   companyId: string;
   primaryContactId?: string | null;
-  /** Denormalized — mirrors Company.name for fast tables */
+  /** Denormalized - mirrors Company.name for fast tables */
   company: string;
   contactName: string;
   email: string;
@@ -43,7 +45,7 @@ export type Lead = {
   updatedAt: string;
 };
 
-/** Freelancer pipeline — matches revenue stages before win/loss. */
+/** Freelancer pipeline - matches revenue stages before win/loss. */
 export type DealStage =
   | "lead"
   | "contacted"
@@ -115,7 +117,7 @@ export type ActivityNote = {
   occurredAt: string;
 };
 
-/** Post-sale delivery — lanes follow calendar buckets on the Projects board */
+/** Post-sale delivery - lanes follow calendar buckets on the Projects board */
 export type ProjectStatus = "planned" | "active" | "blocked" | "done";
 
 export type Project = {
@@ -126,7 +128,7 @@ export type Project = {
   dealId?: string | null;
   /** Anchor calendar date for year / month / week lanes */
   scheduledStart: string;
-  /** Optional local hour (0–23) for day-board lanes */
+  /** Optional local hour (0-23) for day-board lanes */
   scheduledHour?: number | null;
   status: ProjectStatus;
   owner: string;
@@ -175,28 +177,34 @@ export type CustomerPortfolio = {
   address: string | null;
 };
 
-/** ~30–90 day execution outcomes (OKR-style “committed” horizon) */
-export type GoalHorizon = "short_term" | "long_term";
+/**
+ * Goal time horizons — near-term commits → strategic posture → ultra-long north stars.
+ * `short_term` attaches `longTermGoalId` (to an existing `long_term` goal).
+ * Optional `visionParentGoalId` anchors `long_term` goals to any 5/10/20-year vision row.
+ */
+export type GoalHorizon =
+  | "short_term"
+  | "long_term"
+  | "vision_5"
+  | "vision_10"
+  | "vision_20";
 
 export type GoalStatus = "active" | "completed" | "archived";
 
-/** Life / business pillars common in exec & coaching frameworks */
-export type GoalArea =
-  | "revenue"
-  | "delivery"
-  | "growth"
-  | "health"
-  | "learning"
-  | "relationships";
+export type { GoalArea };
 
 export type Goal = {
   id: string;
   horizon: GoalHorizon;
+  /** Strategic (`long_term`) goal this short-term rolls up to; always null unless horizon is short_term */
+  longTermGoalId: string | null;
+  /** Ultra-long vision goal this strategic row aligns with; always null unless horizon is long_term */
+  visionParentGoalId: string | null;
   title: string;
   /** Measurable outcome (“specific / measurable”) */
   metric: string | null;
   targetDate: string | null;
-  /** 0–100 checkpoint */
+  /** 0-100 checkpoint */
   progress: number;
   status: GoalStatus;
   area: GoalArea | null;

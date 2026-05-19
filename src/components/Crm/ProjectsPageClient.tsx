@@ -103,7 +103,7 @@ export function ProjectsPageClient() {
   return (
     <CrmPage
       title="Projects"
-      subtitle={`Calendar kanban · ${visibleCount} card${visibleCount === 1 ? "" : "s"} in this ${granularity} window. Inspired by simple column boards — separate lanes per zoom level.`}
+      subtitle={`Calendar kanban · ${visibleCount} card${visibleCount === 1 ? "" : "s"} in this ${granularity} window. Inspired by simple column boards - separate lanes per zoom level.`}
     >
       <div className="dashboard-focus space-y-8 sm:space-y-10">
         <DashboardPrioritiesSection />

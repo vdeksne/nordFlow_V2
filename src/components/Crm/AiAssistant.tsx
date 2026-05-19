@@ -75,7 +75,7 @@ function replyForAction(actionId: string): string {
       return [
         "**Push:** revenue hides in velocity, not volume.",
         "",
-        "Pick **three deals** stuck before proposal with no dated next step — force **another meeting or disqualify**. Dead stages poison forecast.",
+        "Pick **three deals** stuck before proposal with no dated next step - force **another meeting or disqualify**. Dead stages poison forecast.",
         "Run **negotiation hygiene**: every deal there needs a dated close plan and named signer on your side.",
         "Mine **lost reasons** (e.g. Kraków Robotics). Pattern-match so reps stop repeating the same miss.",
         "",

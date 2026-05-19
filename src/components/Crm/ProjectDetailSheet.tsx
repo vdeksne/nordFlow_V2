@@ -192,7 +192,7 @@ export function ProjectDetailSheet({
                     htmlFor="detail-project-hour"
                     className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide"
                   >
-                    Hour (0–23)
+                    Hour (0-23)
                   </label>
                   <Input
                     id="detail-project-hour"

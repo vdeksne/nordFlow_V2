@@ -239,7 +239,7 @@ export function DashboardPrioritiesSection() {
               Three things before lunch
             </h2>
             <p className="text-muted-foreground max-w-lg text-sm leading-relaxed sm:text-[15px]">
-              Seven slots max — ranked by how loud they scream. Eat the frog(s).
+              Seven slots max - ranked by how loud they scream. Eat the frog(s).
               Your LinkedIn scroll can wait; dinner rent cannot.
             </p>
           </div>
@@ -263,7 +263,7 @@ export function DashboardPrioritiesSection() {
               <Layers className="size-7" aria-hidden />
             </div>
             <p className="text-lg font-semibold tracking-tight">
-              Nothing to dodge — sus, but okay
+              Nothing to dodge - sus, but okay
             </p>
             <p className="text-muted-foreground max-w-sm text-sm">
               Either you shipped everything or you forgot to log work. Both
@@ -296,7 +296,7 @@ export function DashboardPrioritiesSection() {
                       className="flex min-h-[200px] flex-col items-center justify-center rounded-none border border-dashed border-white/[0.08] bg-white/[0.02] px-4 text-center"
                     >
                       <p className="text-muted-foreground text-sm font-medium">
-                        Open slot — rare
+                        Open slot - rare
                       </p>
                       <p className="text-muted-foreground/70 mt-1 text-xs">
                         Steal time back or add something worth doing

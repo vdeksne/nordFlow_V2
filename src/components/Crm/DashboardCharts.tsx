@@ -38,7 +38,7 @@ import { useTasks } from "./TasksContext";
 type DashboardChartsProps = {
   deals: Deal[];
   leads: Lead[];
-  /** `lean` hides the chart wall — trajectory + revenue mix only. */
+  /** `lean` hides the chart wall - trajectory + revenue mix only. */
   density?: "full" | "lean";
 };
 
@@ -130,7 +130,7 @@ function ScatterDealTooltip({
 }
 
 function formatMonthTick(m: string) {
-  if (!m || m === "—") return m;
+  if (!m || m === "-") return m;
   const [y, mo] = m.split("-").map(Number);
   if (!y || !mo) return m;
   return new Date(y, mo - 1).toLocaleString("en-GB", {
@@ -381,7 +381,7 @@ export function DashboardCharts({
         weighted: Math.round(closeBucket.get(month)!.weighted),
       }));
     if (closeMonthMomentum.length === 0) {
-      closeMonthMomentum = [{ month: "—", booked: 0, weighted: 0 }];
+      closeMonthMomentum = [{ month: "-", booked: 0, weighted: 0 }];
     }
 
     const denomRadar = Math.max(weighted, leadTotal, portfolioFees, 1);
@@ -441,7 +441,7 @@ export function DashboardCharts({
             z: 260,
             company: "Northstar Advisory",
             stage: "proposal_sent",
-            title: "Expand pipeline — bubbles appear per live deal",
+            title: "Expand pipeline - bubbles appear per live deal",
           },
         ];
 
@@ -755,7 +755,7 @@ export function DashboardCharts({
               Deal constellation
             </CardTitle>
             <CardDescription>
-              Probability vs deal size — bubble area scales with weighted conviction
+              Probability vs deal size - bubble area scales with weighted conviction
               (mock pipeline + wins, excludes lost).
             </CardDescription>
           </CardHeader>
@@ -830,7 +830,7 @@ export function DashboardCharts({
               Momentum spectrum
             </CardTitle>
             <CardDescription>
-              Five-axis pulse of pipe, leads, fees, tasks, and win mix — normalized
+              Five-axis pulse of pipe, leads, fees, tasks, and win mix - normalized
               to your largest revenue lever.
             </CardDescription>
           </CardHeader>
@@ -896,7 +896,7 @@ export function DashboardCharts({
             </CardTitle>
             <CardDescription>
               Monthly booked wins vs weighted open forecast landing in the same
-              close months — dual trajectory inspired by aligned timelines.
+              close months - dual trajectory inspired by aligned timelines.
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] min-w-0 pt-2 pb-5">

@@ -1,0 +1,340 @@
+import { randomUUID } from "crypto";
+
+import { NextResponse } from "next/server";
+
+import { getSessionFromCookies } from "@/lib/auth/get-session";
+import { isGoalAreaField } from "@/lib/crm/goal-areas";
+import { goalFromRow, type GoalRow } from "@/lib/goals/db-row";
+import {
+  isLongTermGoalOwnedByUser,
+  isVisionParentGoalOwnedByUser,
+} from "@/lib/goals/long-term-parent";
+import { getNeonSql } from "@/lib/neon/client";
+import { isGoalHorizon } from "@/lib/crm/goal-horizons";
+import type { GoalStatus } from "@/lib/crm/types";
+
+function isStatus(v: unknown): v is GoalStatus {
+  return v === "active" || v === "completed" || v === "archived";
+}
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  const sql = getNeonSql();
+  if (!sql) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "Database URL not configured. Add DATABASE_URL (Neon connection string) to .env.local and restart the dev server.",
+      },
+      { status: 503 },
+    );
+  }
+
+  const session = await getSessionFromCookies();
+  if (!session) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Session missing or expired — sign in again.",
+      },
+      { status: 401 },
+    );
+  }
+
+  try {
+    const rows = await sql`
+    SELECT id::text AS id,
+           horizon,
+           long_term_goal_id::text AS long_term_goal_id,
+           vision_parent_goal_id::text AS vision_parent_goal_id,
+           title,
+           metric,
+           target_date,
+           progress,
+           status,
+           area,
+           review_note,
+           sort_order,
+           updated_at::text AS updated_at
+    FROM public.app_goals
+    WHERE user_id = ${session.userId}::uuid
+    ORDER BY
+      CASE horizon
+        WHEN 'short_term' THEN 1
+        WHEN 'long_term' THEN 2
+        WHEN 'vision_5' THEN 3
+        WHEN 'vision_10' THEN 4
+        WHEN 'vision_20' THEN 5
+        ELSE 99
+      END,
+      sort_order ASC,
+      updated_at DESC
+  `;
+
+    const goals = (rows as GoalRow[]).map(goalFromRow);
+    return NextResponse.json({ ok: true, goals });
+  } catch (e) {
+    console.error("[GET /api/goals]", e);
+    const raw = e instanceof Error ? e.message : String(e);
+    const lower = raw.toLowerCase();
+    let error =
+      "Could not read goals from the database. Confirm Neon is reachable and SQL schemas are applied.";
+    if (
+      lower.includes("relation") &&
+      lower.includes("does not exist")
+    ) {
+      error =
+        "Goals table missing — run db/auth-schema.sql then db/goals-schema.sql on Neon.";
+    } else if (
+      (lower.includes("long_term_goal_id") ||
+        lower.includes("vision_parent_goal_id")) &&
+      lower.includes("does not exist")
+    ) {
+      error =
+        "Your Neon `app_goals` table predates a column this build expects (parent link). Run db/goals-ensure-columns.sql and db/goals-strategic-vision-parent-migration.sql in the Neon SQL editor, then click \"Retry sync\".";
+    }
+    const detail =
+      process.env.NODE_ENV === "development"
+        ? ` ${raw.slice(0, 280)}`
+        : "";
+    return NextResponse.json(
+      { ok: false, error: `${error}${detail}` },
+      { status: 500 },
+    );
+  }
+}
+
+type PostBody = {
+  id?: string;
+  horizon?: unknown;
+  longTermGoalId?: unknown;
+  visionParentGoalId?: unknown;
+  title?: unknown;
+  metric?: unknown;
+  targetDate?: unknown;
+  progress?: unknown;
+  status?: unknown;
+  area?: unknown;
+  reviewNote?: unknown;
+  sortOrder?: unknown;
+};
+
+export async function POST(request: Request) {
+  const sql = getNeonSql();
+  if (!sql) {
+    return NextResponse.json(
+      { ok: false, error: "Database not configured" },
+      { status: 503 },
+    );
+  }
+
+  const session = await getSessionFromCookies();
+  if (!session) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, {
+      status: 401,
+    });
+  }
+
+  let body: PostBody;
+  try {
+    body = (await request.json()) as PostBody;
+  } catch {
+    return NextResponse.json({ ok: false, error: "Invalid JSON" }, {
+      status: 400,
+    });
+  }
+
+  if (!isGoalHorizon(body.horizon)) {
+    return NextResponse.json({ ok: false, error: "Invalid horizon" }, {
+      status: 400,
+    });
+  }
+
+  const title =
+    typeof body.title === "string" ? body.title.trim() : "";
+  if (!title) {
+    return NextResponse.json({ ok: false, error: "Title required" }, {
+      status: 400,
+    });
+  }
+
+  if (!isStatus(body.status)) {
+    return NextResponse.json({ ok: false, error: "Invalid status" }, {
+      status: 400,
+    });
+  }
+
+  const areaRaw = body.area;
+  if (!isGoalAreaField(areaRaw)) {
+    return NextResponse.json({ ok: false, error: "Invalid area" }, {
+      status: 400,
+    });
+  }
+
+  const metric =
+    typeof body.metric === "string"
+      ? body.metric.trim() || null
+      : body.metric === null
+        ? null
+        : null;
+
+  const targetDate =
+    typeof body.targetDate === "string"
+      ? body.targetDate.trim() || null
+      : body.targetDate === null
+        ? null
+        : null;
+
+  const progressNum =
+    typeof body.progress === "number" && Number.isFinite(body.progress)
+      ? Math.min(100, Math.max(0, Math.round(body.progress)))
+      : 0;
+
+  const sortOrder =
+    typeof body.sortOrder === "number" && Number.isFinite(body.sortOrder)
+      ? Math.round(body.sortOrder)
+      : 0;
+
+  const reviewNote =
+    typeof body.reviewNote === "string"
+      ? body.reviewNote.trim() || null
+      : body.reviewNote === null
+        ? null
+        : null;
+
+  const area =
+    areaRaw === "" || areaRaw === undefined || areaRaw === null
+      ? null
+      : areaRaw;
+
+  let longTermGoalId: string | null = null;
+  if (body.horizon === "short_term") {
+    const rawParent = body.longTermGoalId;
+    const pid =
+      typeof rawParent === "string" && /^[0-9a-f-]{36}$/i.test(rawParent)
+        ? rawParent
+        : null;
+    if (!pid) {
+      return NextResponse.json(
+        { ok: false, error: "longTermGoalId required for short-term goals" },
+        { status: 400 },
+      );
+    }
+    const okParent = await isLongTermGoalOwnedByUser(sql, session.userId, pid);
+    if (!okParent) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid long-term parent goal" },
+        { status: 400 },
+      );
+    }
+    longTermGoalId = pid;
+  }
+
+  let visionParentGoalId: string | null = null;
+  if (body.horizon === "long_term") {
+    const rawVision = body.visionParentGoalId;
+    if (rawVision !== undefined && rawVision !== null && rawVision !== "") {
+      const vid =
+        typeof rawVision === "string" &&
+        /^[0-9a-f-]{36}$/i.test(rawVision)
+          ? rawVision
+          : null;
+      if (!vid) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "visionParentGoalId must be a UUID or empty for strategic goals",
+          },
+          { status: 400 },
+        );
+      }
+      const okVp = await isVisionParentGoalOwnedByUser(sql, session.userId, vid);
+      if (!okVp) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "Invalid vision parent goal (must be 5-, 10-, or 20-year vision)",
+          },
+          { status: 400 },
+        );
+      }
+      visionParentGoalId = vid;
+    }
+  }
+
+  const id =
+    typeof body.id === "string" && /^[0-9a-f-]{36}$/i.test(body.id)
+      ? body.id
+      : randomUUID();
+
+  try {
+    const inserted = await sql`
+      INSERT INTO public.app_goals (
+        id,
+        user_id,
+        horizon,
+        long_term_goal_id,
+        vision_parent_goal_id,
+        title,
+        metric,
+        target_date,
+        progress,
+        status,
+        area,
+        review_note,
+        sort_order,
+        updated_at
+      )
+      VALUES (
+        ${id}::uuid,
+        ${session.userId}::uuid,
+        ${body.horizon},
+        ${longTermGoalId},
+        ${visionParentGoalId},
+        ${title},
+        ${metric},
+        ${targetDate},
+        ${progressNum},
+        ${body.status},
+        ${area},
+        ${reviewNote},
+        ${sortOrder},
+        CURRENT_DATE
+      )
+      RETURNING id::text AS id,
+                horizon,
+                long_term_goal_id::text AS long_term_goal_id,
+                vision_parent_goal_id::text AS vision_parent_goal_id,
+                title,
+                metric,
+                target_date,
+                progress,
+                status,
+                area,
+                review_note,
+                sort_order,
+                updated_at::text AS updated_at
+    `;
+
+    const row = inserted[0] as GoalRow | undefined;
+    if (!row) {
+      return NextResponse.json({ ok: false, error: "Insert failed" }, {
+        status: 500,
+      });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      goal: goalFromRow(row),
+    });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[POST /api/goals]", e);
+    return NextResponse.json(
+      { ok: false, error: msg.includes("duplicate") ? "Goal id conflict" : "Save failed" },
+      { status: 409 },
+    );
+  }
+}

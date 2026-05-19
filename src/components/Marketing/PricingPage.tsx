@@ -13,7 +13,7 @@ type Billing = "monthly" | "yearly";
 const YEARLY_DISCOUNT = 0.15;
 
 function formatEuroRange(low: number, high: number) {
-  return `€${low}–€${high}`;
+  return `€${low}-€${high}`;
 }
 
 export type PricingPageProps = {
@@ -37,7 +37,7 @@ export function PricingPage({ variant = "marketing" }: PricingPageProps) {
       : formatEuroRange(proYearlyLow, proYearlyHigh);
   const proPriceSub =
     billing === "monthly"
-      ? "Flat monthly fee — pick what fits your practice."
+      ? "Flat monthly fee - pick what fits your practice."
       : `About ${formatEuroRange(proEquivLow, proEquivHigh)} / month, billed annually.`;
 
   const body = (
@@ -52,7 +52,7 @@ export function PricingPage({ variant = "marketing" }: PricingPageProps) {
           </h1>
           <p className="text-muted-foreground mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-pretty">
             Automate follow-ups, keep deadlines visible, and run a pipeline that
-            stays honest — without enterprise bloat or spreadsheet chaos.
+            stays honest - without enterprise bloat or spreadsheet chaos.
           </p>
         </div>
       ) : null}
@@ -181,7 +181,7 @@ export function PricingPage({ variant = "marketing" }: PricingPageProps) {
 
       <p className="text-muted-foreground mx-auto mt-14 max-w-xl text-center text-[13px] leading-relaxed">
         Prices shown are indicative for this demo. Wire Stripe or your billing
-        provider when you launch — VAT may apply by region.
+        provider when you launch - VAT may apply by region.
       </p>
     </>
   );

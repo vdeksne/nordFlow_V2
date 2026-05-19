@@ -145,7 +145,7 @@ export function AddProjectSheet() {
               id="project-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Website revamp — phase 2"
+              placeholder="e.g. Website revamp - phase 2"
               className="border-white/[0.1] bg-[color-mix(in_oklab,var(--card)_65%,transparent)]"
             />
           </div>
@@ -187,7 +187,7 @@ export function AddProjectSheet() {
                 htmlFor="project-hour"
                 className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wide"
               >
-                Hour (0–23, day view)
+                Hour (0-23, day view)
               </label>
               <Input
                 id="project-hour"
