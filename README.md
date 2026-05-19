@@ -1,8 +1,22 @@
 # NordFlow CRM · StartSchool hackathon
 
-A **demo-first CRM web app** focused on a polished **dark, mobile-aware UI**: customer portfolio, leads, pipeline deals, task board, dashboard KPIs, and a **sales copilot preview** (mock assistant + keyboard shortcut). Data for customers, leads, deals, and tasks is stored in **`localStorage`** so the flow works offline without a backend.
+NordFlow is a **demo-first CRM** (`npm`: **`crm-hackatons@0.1.0`**, MIT, private)—dark, mobile-aware UI for portfolio, leads, pipeline, tasks, `/today`, goals, dashboard KPIs, and a **copilot preview** (mock assistant, ⌘K / Ctrl+K). **CRM data** (customers, leads, deals, tasks) persists in **`localStorage`** unless you extend it; **`/dashboard`** is the primary entry (root redirects).
 
-The root route redirects to **`/dashboard`**.
+### Technical orientation
+
+| Axis | Choices (see `package.json` for semver ranges) |
+|------|-----------------------------------------------|
+| **Framework** | [Next.js](https://nextjs.org) **16.2.6** — App Router, `next dev` / `next build` use **Turbopack**. |
+| **UI runtime** | [React](https://react.dev) **19.2.4** + React DOM **19.2.4** |
+| **Language** | [TypeScript](https://www.typescriptlang.org) **^5**, `strict` mode (`target` ES2017, `moduleResolution: bundler`) |
+| **Styling** | [Tailwind CSS](https://tailwindcss.com) **^4**, [`@tailwindcss/postcss`](https://tailwindcss.com/docs/installation/using-postcss) **^4**, [`tw-animate-css`](https://github.com/Wombosvideo/tw-animate-css) **^1.4** |
+| **UI kit** | [`@base-ui/react`](https://base-ui.com) **^1.4**, [`class-variance-authority`](https://cva.style) **^0.7**, [`tailwind-merge`](https://github.com/dcastil/tailwind-merge) **^3**, [`clsx`](https://github.com/lukeed/clsx) **^2**, [`shadcn`](https://ui.shadcn.com/) CLI **^4.7**, [Lucide](https://lucide.dev) (`lucide-react` **^1.14**) |
+| **Charts / CSV** | [Recharts](https://recharts.org) **^3.6** · [Papa Parse](https://www.papaparse.com) **^5.5** |
+| **Auth path (optional)** | [Neon serverless driver](https://neon.tech/docs/serverless/serverless-driver) **`@neondatabase/serverless` ^1.1** · [jose](https://github.com/panva/jose) **^6.2** (JWT) · [bcryptjs](https://github.com/dcodeIO/bcrypt.js) **^3** |
+| **Scaffold leftover** | [`@supabase/supabase-js`](https://supabase.com/docs/reference/javascript) **^2** — client stub only unless you plug Supabase in |
+| **Quality & docs** | [ESLint](https://eslint.org) **^9** + [`eslint-config-next` 16.2.6](https://nextjs.org/docs/app/api-reference/config/eslint) · [Storybook](https://storybook.js.org) **^10.3** (`@storybook/nextjs-vite`) · [Vitest](https://vitest.dev) **^4.1** + [`@vitest/browser-playwright`](https://vitest.dev/guide/browser/playwright) · [Playwright](https://playwright.dev) **^1.60** · [Vite](https://vite.dev) **^8** (Storybook / Vitest host) |
+
+**Note:** Versions above match the workspace `package.json` at authoring time (`^` and exact pins as declared there). Bump the table when you bump dependencies.
 
 ---
 
@@ -20,21 +34,19 @@ The root route redirects to **`/dashboard`**.
 
 ---
 
-## Tech stack
+## Tech stack (links)
 
-| Layer | Choices |
-|-------|---------|
-| **Framework** | [Next.js](https://nextjs.org) **16** (App Router), **React 19**, TypeScript |
-| **Styling** | [Tailwind CSS](https://tailwindcss.com) **v4**, [`tw-animate-css`](https://github.com/Wombosvideo/tw-animate-css) |
-| **UI primitives** | [@base-ui/react](https://base-ui.com/react/overview/quick-start), [`class-variance-authority`](https://cva.style/docs), [`tailwind-merge`](https://github.com/dcastil/tailwind-merge), [`clsx`](https://github.com/lukeed/clsx), [`shadcn`](https://ui.shadcn.com/) tooling |
-| **Icons** | [Lucide React](https://lucide.dev) |
-| **Charts** | [Recharts](https://recharts.org) |
-| **CSV** | [Papa Parse](https://www.papaparse.com) |
-| **Quality / docs** | ESLint (`eslint-config-next`), [Storybook](https://storybook.js.org) **10**, Vitest + Playwright (Storybook addon) |
-| **Bundler (dev)** | Turbopack via `next dev` |
-| **Fonts** | [Figtree](https://fonts.google.com/specimen/Figtree) via `next/font/google` |
+Pinned versions sit in **[Technical orientation](#technical-orientation)**. Layer map:
 
-**Optional / scaffold:** [`@supabase/supabase-js`](https://supabase.com/docs/reference/javascript) remains available via `src/lib/supabase/client.ts` if you later add Supabase; credential login for this repo uses **Neon + bcrypt + JWT cookies** instead.
+| Layer | Primary libraries |
+|-------|-------------------|
+| **Routing / rendering** | Next.js App Router, Server Components & route handlers |
+| **Styling** | Tailwind v4, `tw-animate-css`, `next/font/google` (**Figtree**) |
+| **Components** | Base UI · CVA · shadcn-style composition · Lucide icons |
+| **Data viz / import** | Recharts · Papa Parse |
+| **Testing / docs** | Storybook Next+Vite · Vitest browser mode · ESLint |
+
+**Optional / scaffold:** Supabase JS client exists under `src/lib/supabase/`; **credential auth in this repo** is **Neon + bcryptjs + JWT (jose) + cookie session**.
 
 ---
 
