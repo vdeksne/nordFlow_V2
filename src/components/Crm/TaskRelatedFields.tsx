@@ -1,20 +1,41 @@
 "use client";
 
-import type { TaskRelatedKind } from "@/lib/crm/types";
+import type { GoalHorizon, TaskRelatedKind } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
 
 import { useCompanies } from "./CompaniesContext";
 import { useContacts } from "./ContactsContext";
 import { useDeals } from "./DealsContext";
+import { useGoals } from "./GoalsContext";
 import { useLeads } from "./LeadsContext";
 
 const KIND_OPTIONS: { value: TaskRelatedKind; label: string }[] = [
   { value: "none", label: "General / inbox" },
+  { value: "goal", label: "Goal" },
   { value: "deal", label: "Deal" },
   { value: "company", label: "Company" },
   { value: "lead", label: "Lead" },
   { value: "contact", label: "Contact" },
 ];
+
+function goalHorizonRank(h: GoalHorizon): number {
+  switch (h) {
+    case "short_term":
+      return 0;
+    case "long_term":
+      return 1;
+    case "vision_5":
+      return 2;
+    case "vision_10":
+      return 3;
+    case "vision_20":
+      return 4;
+    default: {
+      const _n: never = h;
+      return _n;
+    }
+  }
+}
 
 const selectClass =
   "border-input bg-[color-mix(in_oklab,var(--card)_55%,transparent)] h-10 w-full rounded-none border border-white/[0.08] px-3 text-sm text-foreground shadow-[inset_0_1px_0_0_rgb(255_255_255/0.04)]";
@@ -36,6 +57,14 @@ export function TaskRelatedFields({
   const { companies } = useCompanies();
   const { leads } = useLeads();
   const { contacts } = useContacts();
+  const { goals } = useGoals();
+
+  const sortedGoals = [...goals].sort((a, b) => {
+    const hr = goalHorizonRank(a.horizon) - goalHorizonRank(b.horizon);
+    if (hr !== 0) return hr;
+    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+    return b.updatedAt.localeCompare(a.updatedAt);
+  });
 
   const sortedDeals = [...deals].sort((a, b) => a.company.localeCompare(b.company));
   const sortedCompanies = [...companies].sort((a, b) => a.name.localeCompare(b.name));
@@ -62,6 +91,47 @@ export function TaskRelatedFields({
           ))}
         </select>
       </div>
+
+      {relatedKind === "goal" ? (
+        <div className="space-y-1.5">
+          <span className="text-muted-foreground text-xs font-medium">
+            Goal
+          </span>
+          {sortedGoals.length === 0 ? (
+            <>
+              <select className={cn(selectClass)} disabled value="">
+                <option value="">
+                  No goals yet — create some on the Goals page
+                </option>
+              </select>
+              <p className="text-muted-foreground text-[11px] leading-relaxed">
+                Tasks can link to a goal once you&apos;ve defined outcomes on{" "}
+                <strong className="text-foreground font-semibold">Goals</strong>.
+              </p>
+            </>
+          ) : (
+            <>
+              <select
+                className={cn(selectClass)}
+                value={relatedId ?? ""}
+                onChange={(e) =>
+                  onRelatedIdChange(e.target.value === "" ? null : e.target.value)
+                }
+              >
+                <option value="">Select goal…</option>
+                {sortedGoals.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.title.length > 52 ? `${g.title.slice(0, 50)}…` : g.title}
+                  </option>
+                ))}
+              </select>
+              <p className="text-muted-foreground text-[11px] leading-relaxed">
+                Executes toward that goal — horizons come from the Goals board.
+              </p>
+            </>
+          )}
+        </div>
+      ) : null}
 
       {relatedKind === "deal" ? (
         <div className="space-y-1.5">

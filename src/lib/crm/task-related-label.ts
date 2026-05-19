@@ -1,7 +1,9 @@
+import { goalHorizonBadge } from "@/lib/crm/goal-horizons";
 import type {
   Company,
   Contact,
   Deal,
+  Goal,
   Invoice,
   Lead,
   Task,
@@ -12,6 +14,7 @@ export type RelatedLookups = {
   companies: Company[];
   leads: Lead[];
   contacts: Contact[];
+  goals: Goal[];
 };
 
 /** Single-line label for tasks board / priorities (freelancer CRM linking). */
@@ -40,6 +43,15 @@ export function formatTaskRelatedLine(task: Task, ctx: RelatedLookups): string {
     if (!c) return `Contact · ${task.relatedId}`;
     const co = ctx.companies.find((x) => x.id === c.companyId);
     return co ? `Contact · ${c.name} · ${co.name}` : `Contact · ${c.name}`;
+  }
+
+  if (task.relatedKind === "goal") {
+    const g = ctx.goals.find((x) => x.id === task.relatedId);
+    if (!g) return `Goal · ${task.relatedId ?? "…"}`;
+    const badge = goalHorizonBadge(g.horizon);
+    const short =
+      g.title.length > 44 ? `${g.title.slice(0, 42)}…` : g.title;
+    return `Goal · ${badge} · ${short}`;
   }
 
   return "General · Inbox";

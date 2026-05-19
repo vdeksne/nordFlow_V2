@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { ListTodo, TrendingUp, Users } from "lucide-react";
 
 import { StatCard } from "./StatCard";
-import { customers, deals, tasks } from "@/lib/crm/mock-data";
+import { customers, deals } from "@/lib/crm/mock-data";
 import { formatEur } from "@/lib/format";
 
 function DashboardStatsDemo() {
@@ -13,7 +13,8 @@ function DashboardStatsDemo() {
     (sum, d) => sum + d.valueEur * (d.probability / 100),
     0,
   );
-  const openTasks = tasks.filter((t) => !t.done).length;
+  /** Story-only illustration — app tasks start empty for users */
+  const openTasksDemo = 11;
 
   return (
     <div className="dashboard-focus grid gap-4 md:grid-cols-3">
@@ -40,7 +41,7 @@ function DashboardStatsDemo() {
       />
       <StatCard
         title="Open loops"
-        value={`${openTasks}`}
+        value={`${openTasksDemo}`}
         hint="Still yours until the checkbox says otherwise."
         icon={ListTodo}
         trend={{ label: "Done beats perfect", positive: true }}

@@ -47,8 +47,8 @@ export function DashboardPageClient() {
 
   return (
     <CrmPage
-      title="Freelancer desk"
-      subtitle="Knock out the top three tasks, then chase money. Everything else is cosplay."
+      title="Your desk"
+      subtitle="A calm view across what pays the bills and what aligns with where you&apos;re aiming—few clear moves, fewer fantasies."
     >
       <div className="dashboard-focus space-y-8 sm:space-y-10">
         <DashboardPrioritiesSection />
@@ -61,10 +61,10 @@ export function DashboardPageClient() {
               </span>
               <div>
                 <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.22em] uppercase">
-                  Runway
+                  Foundations
                 </p>
                 <p className="text-foreground text-base font-semibold tracking-tight">
-                  Numbers that judge you lovingly
+                  Money and traction, without the shame spiral
                 </p>
               </div>
             </div>
@@ -74,10 +74,10 @@ export function DashboardPageClient() {
             <StatCard
               title="Weighted pipeline"
               value={formatEur(Math.round(weightedPipeline))}
-              hint="Fantasy meets spreadsheets - probability-adjusted."
+              hint="What could land if probabilities hold—fuel for stability, not hype."
               icon={TrendingUp}
               trend={{
-                label: `${openPipeline.length} deals still pretending closure is "soon"`,
+                label: `${openPipeline.length} open opportunities in motion`,
                 positive: true,
               }}
               className="border-white/[0.05]"
@@ -94,10 +94,10 @@ export function DashboardPageClient() {
             <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
               <div className="space-y-1">
                 <CardTitle className="text-lg font-semibold">
-                  Deals in motion
+                  Active work under contract
                 </CardTitle>
                 <CardDescription className="text-muted-foreground">
-                  Highest-value stuff before it ghosts you.
+                  What&apos;s in play before it fades—shows up alongside goals and habits in your week.
                 </CardDescription>
               </div>
               <Badge variant="secondary" className="rounded-none">
@@ -152,23 +152,24 @@ export function DashboardPageClient() {
           <Card className="border-white/[0.05] bg-[color-mix(in_oklab,var(--card)_92%,transparent)] backdrop-blur-md">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-semibold">
-                Side quests & inbox bait
+                Leads &amp; softer edges
               </CardTitle>
               <CardDescription>
-                Raw pipe plus leads worth answering before they go cold.
+                People curious about working with you—inbox energy that isn&apos;t
+                your whole identity.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5 text-sm">
               <div className="flex items-start justify-between gap-3 rounded-none border border-white/[0.06] bg-muted/25 px-4 py-3">
                 <div>
                   <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.18em] uppercase">
-                    Unweighted fantasy total
+                    Full pipeline snapshot
                   </p>
                   <p className="text-lg font-semibold tracking-tight">
                     {formatEur(pipelineValue)}
                   </p>
                   <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                    Before probability rains on your parade.
+                    Every open deal summed—heavy or light, awareness beats denial.
                   </p>
                 </div>
                 <ArrowUpRight className="text-primary size-5 shrink-0" aria-hidden />
@@ -176,7 +177,7 @@ export function DashboardPageClient() {
 
               <div>
                 <p className="text-muted-foreground mb-3 text-[10px] font-semibold tracking-[0.18em] uppercase">
-                  Warm-ish leads
+                  Leads warming up
                 </p>
                 <div className="space-y-2">
                   {spotlight.map((lead) => (

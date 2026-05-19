@@ -11,20 +11,15 @@ import { AddTaskSheet } from "./AddTaskSheet";
 import { useCompanies } from "./CompaniesContext";
 import { useContacts } from "./ContactsContext";
 import { useDeals } from "./DealsContext";
+import { useGoals } from "./GoalsContext";
 import { useLeads } from "./LeadsContext";
 import { TaskDetailSheet } from "./TaskDetailSheet";
+import {
+  formatTaskScheduleLine,
+  taskOpenSortKey,
+  taskTouchesTodayCalendar,
+} from "./TaskFormShared";
 import { useTasks } from "./TasksContext";
-
-function startOfDay(ts: number) {
-  const d = new Date(ts);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-function isDueToday(iso: string) {
-  const due = new Date(iso).getTime();
-  return startOfDay(due) === startOfDay(Date.now());
-}
 
 function isOverdue(iso: string, done: boolean) {
   if (done) return false;
@@ -57,7 +52,7 @@ function MomentumOrbit({ value }: { value: number }) {
     <div
       className="text-primary relative size-[42px] shrink-0"
       role="img"
-      aria-label={`Momentum ${pct}%`}
+      aria-label={`Progress ${pct}%`}
     >
       <svg className="-rotate-90 size-full" viewBox="0 0 40 40">
         <circle
@@ -101,6 +96,7 @@ function TaskCard({
   const { companies } = useCompanies();
   const { leads } = useLeads();
   const { contacts } = useContacts();
+  const { goals } = useGoals();
   const relatedLine = useMemo(
     () =>
       formatTaskRelatedLine(task, {
@@ -108,8 +104,9 @@ function TaskCard({
         companies,
         leads,
         contacts,
+        goals,
       }),
-    [task, deals, companies, leads, contacts],
+    [task, deals, companies, leads, contacts, goals],
   );
 
   return (
@@ -146,7 +143,13 @@ function TaskCard({
             type="button"
             role="checkbox"
             aria-checked={task.done}
-            aria-label={task.done ? "Mark as open" : "Mark as done"}
+            aria-label={
+              task.done
+                ? "Mark as open"
+                : task.repeatDaily
+                  ? "Finish today — reschedule for tomorrow at the same time"
+                  : "Mark as done"
+            }
             onClick={(e) => {
               e.stopPropagation();
               onToggle(task.id);
@@ -174,6 +177,11 @@ function TaskCard({
               <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.16em] uppercase">
                 {priorityLabel(task.priority)}
               </span>
+              {task.repeatDaily ? (
+                <span className="text-primary text-[10px] font-semibold tracking-wide uppercase">
+                  Daily
+                </span>
+              ) : null}
               {overdue && !task.done ? (
                 <span className="text-[10px] font-semibold tracking-wide text-rose-400/90 uppercase">
                   Overdue
@@ -181,7 +189,7 @@ function TaskCard({
               ) : null}
               {task.done ? (
                 <span className="text-primary text-[10px] font-semibold tracking-[0.14em] uppercase">
-                  Logged
+                  Done
                 </span>
               ) : null}
             </div>
@@ -203,13 +211,7 @@ function TaskCard({
               Open
             </span>
             <time className="font-medium text-foreground">
-              {new Intl.DateTimeFormat("en-GB", {
-                weekday: "short",
-                day: "numeric",
-                month: "short",
-                hour: "2-digit",
-                minute: "2-digit",
-              }).format(new Date(task.dueAt))}
+              {formatTaskScheduleLine(task)}
             </time>
             <span className="max-w-[9rem] truncate text-muted-foreground">
               {task.assignee}
@@ -220,12 +222,7 @@ function TaskCard({
         <div className="relative mt-4 flex items-center justify-between border-t border-white/[0.05] pt-3 text-[11px] text-muted-foreground sm:hidden">
           <span className="truncate pr-2">{task.assignee}</span>
           <time className="shrink-0 tabular-nums">
-            {new Intl.DateTimeFormat("en-GB", {
-              day: "numeric",
-              month: "short",
-              hour: "2-digit",
-              minute: "2-digit",
-            }).format(new Date(task.dueAt))}
+            {formatTaskScheduleLine(task)}
           </time>
         </div>
       </div>
@@ -263,10 +260,7 @@ export function TasksBoard() {
   const { doneTasks, todayTasks, aheadTasks, stats } = useMemo(() => {
     const sortedOpen = [...tasks]
       .filter((t) => !t.done)
-      .sort(
-        (a, b) =>
-          new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime(),
-      );
+      .sort((a, b) => taskOpenSortKey(a) - taskOpenSortKey(b));
     const sortedDone = [...tasks]
       .filter((t) => t.done)
       .sort(
@@ -274,8 +268,8 @@ export function TasksBoard() {
           new Date(b.dueAt).getTime() - new Date(a.dueAt).getTime(),
       );
 
-    const today = sortedOpen.filter((t) => isDueToday(t.dueAt));
-    const ahead = sortedOpen.filter((t) => !isDueToday(t.dueAt));
+    const today = sortedOpen.filter((t) => taskTouchesTodayCalendar(t));
+    const ahead = sortedOpen.filter((t) => !taskTouchesTodayCalendar(t));
 
     const total = tasks.length || 1;
     const momentum = Math.round((sortedDone.length / total) * 100);
@@ -284,9 +278,9 @@ export function TasksBoard() {
     if (sortedOpen[0]) {
       nextLabel = new Intl.DateTimeFormat("en-GB", {
         weekday: "short",
-        hour: "2-digit",
-        minute: "2-digit",
       }).format(new Date(sortedOpen[0].dueAt));
+      nextLabel +=
+        " · " + formatTaskScheduleLine(sortedOpen[0]);
     }
 
     return {
@@ -306,7 +300,8 @@ export function TasksBoard() {
     <div className="space-y-10">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-muted-foreground/90 max-w-2xl text-center text-[13px] font-medium leading-relaxed tracking-tight md:text-left">
-          One calm lane at a time. Tick the small wins, momentum compounds.
+          Name what deserves your finite attention—not everything on your mind,
+          only what aligns with where you&apos;re aiming.
         </p>
         <AddTaskSheet />
       </div>
@@ -314,30 +309,31 @@ export function TasksBoard() {
       <div className="border-sidebar-border grid gap-6 border-b border-white/[0.05] pb-8 sm:grid-cols-3">
         <div>
           <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.2em] uppercase">
-            Open focus
+            Still in motion
           </p>
           <p className="text-foreground mt-1 text-2xl font-semibold tabular-nums tracking-tight">
             {stats.open}
             <span className="text-muted-foreground text-base font-normal">
               {" "}
-              active
+              open
             </span>
           </p>
         </div>
         <div>
           <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.2em] uppercase">
-            Momentum
+            Follow-through
           </p>
           <div className="mt-1 flex items-center gap-3">
             <MomentumOrbit value={stats.momentum} />
             <p className="text-muted-foreground text-[11px] leading-snug tracking-wide">
-              Closed tasks fuel momentum; keep closing loops.
+              Done beats perfect. Closing small promises builds trust—with
+              yourself and everyone counting on you.
             </p>
           </div>
         </div>
         <div>
           <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.2em] uppercase">
-            Next move
+            Next up
           </p>
           <p className="text-primary mt-1 text-2xl font-semibold tabular-nums tracking-tight">
             {stats.nextLabel}
@@ -352,12 +348,12 @@ export function TasksBoard() {
         />
         <div className="relative z-[1] mx-auto flex max-w-3xl items-start justify-between gap-4 px-2">
           {[
-            { label: "Today", hot: todayTasks.length > 0, hint: "Now" },
-            { label: "Ahead", hot: aheadTasks.length > 0, hint: "Queue" },
+            { label: "Today", hot: todayTasks.length > 0, hint: "This day" },
+            { label: "Ahead", hot: aheadTasks.length > 0, hint: "Coming up" },
             {
-              label: "Wins",
+              label: "Done",
               hot: doneTasks.length > 0,
-              hint: "Logged",
+              hint: "Earned rest",
             },
           ].map((node, i) => (
             <div
@@ -396,7 +392,7 @@ export function TasksBoard() {
                   Today
                 </h2>
                 <p className="text-muted-foreground mt-0.5 text-[11px] tracking-wide">
-                  Ship what&apos;s due, clarity beats volume.
+                  What you deliberately plan to finish today—not the whole sprint.
                 </p>
               </div>
               <span className="text-muted-foreground text-[11px] tabular-nums">
@@ -406,7 +402,7 @@ export function TasksBoard() {
             </header>
             <div className="flex flex-col gap-3">
               {todayTasks.length === 0 ? (
-                <EmptyLane label="Nothing due today, grab something ahead or celebrate the quiet." />
+                <EmptyLane label="Nothing due today—that can be intentional rest, or borrow one step from Ahead." />
               ) : (
                 todayTasks.map((task) => (
                   <div
@@ -431,7 +427,7 @@ export function TasksBoard() {
                   Ahead
                 </h2>
                 <p className="text-muted-foreground mt-0.5 text-[11px] tracking-wide">
-                  Queue with intention, protect deep work.
+                  Honest backlog: link some to Goals so work serves the life you want.
                 </p>
               </div>
               <span className="text-muted-foreground text-[11px] tabular-nums">
@@ -441,7 +437,7 @@ export function TasksBoard() {
             </header>
             <div className="flex flex-col gap-3">
               {aheadTasks.length === 0 ? (
-                <EmptyLane label="Your runway is clear, add the next meaningful touch." />
+                <EmptyLane label="Ahead is calm—capture the next tangible step whenever you&apos;re ready." />
               ) : (
                 aheadTasks.map((task) => (
                   <div
@@ -468,26 +464,26 @@ export function TasksBoard() {
             )}
           >
             <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.2em] uppercase">
-              Wins bank
+              Done & remembered
             </p>
             <p className="text-foreground mt-2 text-lg font-semibold tracking-tight">
               {stats.wins}{" "}
               <span className="text-muted-foreground text-sm font-normal">
-                closed
+                finished
               </span>
             </p>
             <p className="text-muted-foreground mt-3 text-[11px] leading-relaxed tracking-wide">
-              Every check-in is proof you&apos;re moving revenue reality, not
-              just lists.
+              These are receipts: effort that matched your intentions, however
+              small. That compounds into a life that feels deliberate, not frantic.
             </p>
           </div>
 
           <div className="space-y-3">
             <h3 className="text-muted-foreground px-1 text-[10px] font-semibold tracking-[0.18em] uppercase">
-              Recent logged
+              Recently finished
             </h3>
             {doneTasks.length === 0 ? (
-              <EmptyLane label="Finish one task, your first win shows up here." />
+              <EmptyLane label="Complete one commitment—something you genuinely care about—and it lands here." />
             ) : (
               <div className="flex flex-col gap-2.5">
                 {doneTasks.map((task) => (
@@ -514,7 +510,7 @@ export function TasksBoard() {
       />
 
       <p className="text-muted-foreground/80 pt-2 text-center text-[10px] tracking-[0.12em] uppercase">
-        Focus · finish · forward
+        Clarity · follow-through · the life underneath the list
       </p>
     </div>
   );

@@ -32,11 +32,13 @@ export function AddTaskSheet() {
   const [title, setTitle] = useState("");
   const [relatedKind, setRelatedKind] = useState<TaskRelatedKind>("none");
   const [relatedId, setRelatedId] = useState<string | null>(null);
+  const [fromLocal, setFromLocal] = useState("");
   const [dueLocal, setDueLocal] = useState(() =>
     toDatetimeLocalValue(defaultDueIso()),
   );
   const [priority, setPriority] =
     useState<(typeof TASK_PRIORITY_OPTIONS)[number]["value"]>("medium");
+  const [repeatDaily, setRepeatDaily] = useState(false);
   const [assignee, setAssignee] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -44,8 +46,10 @@ export function AddTaskSheet() {
     setTitle("");
     setRelatedKind("none");
     setRelatedId(null);
+    setFromLocal("");
     setDueLocal(toDatetimeLocalValue(defaultDueIso()));
     setPriority("medium");
+    setRepeatDaily(false);
     setAssignee("");
     setError(null);
   }, []);
@@ -76,6 +80,30 @@ export function AddTaskSheet() {
       return;
     }
 
+    let fromIso: string | null = null;
+    const trimmedFrom = fromLocal.trim();
+    if (trimmedFrom) {
+      try {
+        const parsed = fromDatetimeLocalValue(trimmedFrom);
+        if (Number.isNaN(new Date(parsed).getTime())) {
+          setError("Pick a valid start date and time, or leave From empty.");
+          return;
+        }
+        fromIso = parsed;
+      } catch {
+        setError("Pick a valid start date and time, or leave From empty.");
+        return;
+      }
+    }
+
+    if (
+      fromIso &&
+      new Date(fromIso).getTime() > new Date(dueIso).getTime()
+    ) {
+      setError("From must be the same moment or earlier than To.");
+      return;
+    }
+
     if (relatedKind !== "none" && !relatedId?.trim()) {
       setError("Pick what this task is linked to, or choose General.");
       return;
@@ -85,8 +113,10 @@ export function AddTaskSheet() {
       title: trimmed,
       relatedKind,
       relatedId: relatedKind === "none" ? null : relatedId,
+      scheduledFromAt: fromIso,
       dueAt: dueIso,
       priority,
+      repeatDaily,
       assignee,
     });
     handleOpenChange(false);
@@ -94,8 +124,10 @@ export function AddTaskSheet() {
     addTask,
     assignee,
     dueLocal,
+    fromLocal,
     handleOpenChange,
     priority,
+    repeatDaily,
     relatedId,
     relatedKind,
     title,
@@ -117,8 +149,10 @@ export function AddTaskSheet() {
         <SheetHeader className="border-sidebar-border shrink-0 border-b px-6 py-4">
           <SheetTitle>New task</SheetTitle>
           <SheetDescription>
-            Capture one concrete next step. It lands in Today or Ahead from its
-            due time.
+            Capture a next step. Link it to a goal, deal, contact, or keep it in
+            general inbox — <span className="text-foreground/90">To</span> is
+            required; optional <span className="text-foreground/90">From</span>{" "}
+            starts the block.
           </SheetDescription>
         </SheetHeader>
 
@@ -171,20 +205,57 @@ export function AddTaskSheet() {
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label
-              htmlFor="task-due"
-              className="text-muted-foreground text-xs font-medium"
-            >
-              Due
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label
+                htmlFor="task-from"
+                className="text-muted-foreground text-xs font-medium"
+              >
+                From <span className="text-muted-foreground/70">(optional)</span>
+              </label>
+              <Input
+                id="task-from"
+                type="datetime-local"
+                value={fromLocal}
+                onChange={(e) => setFromLocal(e.target.value)}
+                className="h-10 rounded-none border-white/[0.08] bg-[color-mix(in_oklab,var(--card)_55%,transparent)] [color-scheme:dark]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label
+                htmlFor="task-to"
+                className="text-foreground text-xs font-medium"
+              >
+                To<span className="text-primary"> *</span>
+              </label>
+              <Input
+                id="task-to"
+                type="datetime-local"
+                value={dueLocal}
+                onChange={(e) => setDueLocal(e.target.value)}
+                className="h-10 rounded-none border-white/[0.08] bg-[color-mix(in_oklab,var(--card)_55%,transparent)] [color-scheme:dark]"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-muted-foreground flex cursor-pointer items-start gap-3 text-xs leading-snug">
+              <input
+                type="checkbox"
+                checked={repeatDaily}
+                onChange={(e) => setRepeatDaily(e.target.checked)}
+                className="border-sidebar-border accent-primary mt-0.5 size-4 shrink-0 rounded-none border border-white/[0.12] bg-transparent"
+              />
+              <span>
+                <span className="text-foreground font-semibold">
+                  Repeat daily
+                </span>
+                <span className="text-muted-foreground block font-normal tracking-wide">
+                  Checking it off bumps the window to the next calendar day at
+                  the same clock times (not stored in Done).
+                </span>
+              </span>
             </label>
-            <Input
-              id="task-due"
-              type="datetime-local"
-              value={dueLocal}
-              onChange={(e) => setDueLocal(e.target.value)}
-              className="h-10 rounded-none border-white/[0.08] bg-[color-mix(in_oklab,var(--card)_55%,transparent)] [color-scheme:dark]"
-            />
           </div>
 
           <div className="space-y-1.5">

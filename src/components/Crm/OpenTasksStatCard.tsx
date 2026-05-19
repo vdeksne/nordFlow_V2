@@ -12,11 +12,11 @@ export function OpenTasksStatCard() {
 
   return (
     <StatCard
-      title="Open loops"
+      title="Open commitments"
       value={`${openTasks}`}
-      hint="Still yours until the checkbox says otherwise."
+      hint="Loops you still owe yourself or someone else—not a verdict, just clarity."
       icon={ListTodo}
-      trend={{ label: "Done beats perfect", positive: true }}
+      trend={{ label: "Small closes build trust over time", positive: true }}
       className="border-white/[0.05]"
     />
   );

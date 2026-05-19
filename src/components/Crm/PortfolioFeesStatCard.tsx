@@ -12,11 +12,11 @@ export function PortfolioFeesStatCard() {
 
   return (
     <StatCard
-      title="Retainers & fees"
+      title="Steady client income"
       value={formatEur(total)}
-      hint={`${customers.length} relationship${customers.length === 1 ? "" : "s"} bankrolling Wi-Fi`}
+      hint={`${customers.length} ongoing relationship${customers.length === 1 ? "" : "s"} smoothing the baseline.`}
       icon={Users}
-      trend={{ label: "Recurring beats heroic", positive: true }}
+      trend={{ label: "Rhythm frees room for ambitious goals", positive: true }}
       className="border-white/[0.05]"
     />
   );

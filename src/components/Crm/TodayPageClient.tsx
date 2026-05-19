@@ -1,8 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Check, Clock3, Focus } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Check, Clock3, Focus, GripVertical } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 
 import type { Task, TaskPriority } from "@/lib/crm/types";
 import { formatTaskRelatedLine } from "@/lib/crm/task-related-label";
@@ -12,9 +19,15 @@ import { AddTaskSheet } from "./AddTaskSheet";
 import { useCompanies } from "./CompaniesContext";
 import { useContacts } from "./ContactsContext";
 import { useDeals } from "./DealsContext";
+import { useGoals } from "./GoalsContext";
 import { useLeads } from "./LeadsContext";
 import { TaskDetailSheet } from "./TaskDetailSheet";
-import { TASK_PRIORITY_OPTIONS } from "./TaskFormShared";
+import {
+  TASK_PRIORITY_OPTIONS,
+  formatTaskScheduleLine,
+  taskOpenSortKey,
+  taskTouchesTodayCalendar,
+} from "./TaskFormShared";
 import { useTasks } from "./TasksContext";
 
 const DAY_START_HOUR = 7;
@@ -54,12 +67,219 @@ function priorityLabel(priority: TaskPriority) {
   return "Easy";
 }
 
-function hourBucketIndex(iso: string): number {
+const TIMELINE_BLOCK_EST_HEIGHT_PX = 52;
+const TIMELINE_BLOCK_MIN_GAP_PX = 4;
+/** Snap reschedule targets to multiples of N minutes inside the timeline. */
+const SCHEDULE_DRAG_SNAP_MINUTES = 10;
+
+function timelineMinuteRange(): { start: number; end: number } {
+  const start = DAY_START_HOUR * 60;
+  const end = (DAY_END_HOUR + 1) * 60;
+  return { start, end };
+}
+
+/** Center Y → due timestamp; keeps calendar day / date from previous due. */
+function dueIsoFromTimelineCenterAndHeight(
+  centerYInsideSlot: number,
+  slotInnerHeightPx: number,
+  baseDueIso: string,
+): string {
+  if (slotInnerHeightPx <= 0) return baseDueIso;
+  const frac = clamp01(centerYInsideSlot / slotInnerHeightPx);
+  const { start: startMins, end: endMins } = timelineMinuteRange();
+  let mins = Math.round(startMins + frac * (endMins - startMins));
+  const step = SCHEDULE_DRAG_SNAP_MINUTES;
+  mins =
+    Math.round((mins - startMins) / step) * step + startMins;
+  mins = Math.max(Math.min(mins, endMins), startMins);
+  const hour = Math.floor(mins / 60);
+  const minute = mins % 60;
+  const d = new Date(baseDueIso);
+  d.setHours(hour, minute, 0, 0);
+  return d.toISOString();
+}
+
+function clamp01(n: number): number {
+  return Math.min(1, Math.max(0, n));
+}
+
+type TimelineDragSession = {
+  pointerId: number;
+  task: Task;
+  grabOffsetY: number;
+  lastTopPx: number;
+};
+
+function tentativeTimeLabel(
+  centerYInsideSlot: number,
+  slotInnerHeightPx: number,
+  baseDueIso: string,
+): string {
+  if (slotInnerHeightPx <= 0) return "—";
+  const ts = dueIsoFromTimelineCenterAndHeight(
+    centerYInsideSlot,
+    slotInnerHeightPx,
+    baseDueIso,
+  );
+  return formatShortTime(ts);
+}
+
+function tentativeWindowPreview(
+  centerYInsideSlot: number,
+  slotInnerHeightPx: number,
+  task: Task,
+): string {
+  if (slotInnerHeightPx <= 0) return "—";
+  const baseIso = taskTimelineAnchorIso(task);
+  const nextAnchorIso = dueIsoFromTimelineCenterAndHeight(
+    centerYInsideSlot,
+    slotInnerHeightPx,
+    baseIso,
+  );
+  const rawFrom = task.scheduledFromAt?.trim();
+  if (!rawFrom) {
+    return formatShortTime(nextAnchorIso);
+  }
+  const dur =
+    new Date(task.dueAt).getTime() - new Date(rawFrom).getTime();
+  if (!(dur > 0)) {
+    return formatShortTime(nextAnchorIso);
+  }
+  const nextToIso = new Date(
+    new Date(nextAnchorIso).getTime() + dur,
+  ).toISOString();
+  return formatTaskScheduleLine({
+    scheduledFromAt: nextAnchorIso,
+    dueAt: nextToIso,
+  });
+}
+
+function clampTimelineTop(topPxCandidate: number, innerHeightPx: number): number {
+  const min = TIMELINE_BLOCK_MIN_GAP_PX;
+  const max =
+    innerHeightPx -
+    TIMELINE_BLOCK_EST_HEIGHT_PX -
+    TIMELINE_BLOCK_MIN_GAP_PX;
+  if (max < min) return min;
+  return Math.min(Math.max(topPxCandidate, min), max);
+}
+
+/** Padding-aware inner viewport for dragging against “top” placements. */
+function getTimelineSlotInnerBox(el: HTMLElement | null): {
+  innerTopViewport: number;
+  innerHeight: number;
+} | null {
+  if (!el) return null;
+  const rect = el.getBoundingClientRect();
+  const cs = window.getComputedStyle(el);
+  const pt = Number.parseFloat(cs.paddingTop || "0");
+  const pb = Number.parseFloat(cs.paddingBottom || "0");
+  const innerHeight = el.clientHeight - pt - pb;
+  return {
+    innerTopViewport: rect.top + pt,
+    innerHeight: Math.max(0, innerHeight),
+  };
+}
+
+/** Quick-capture minute pickers aligned with SCHEDULE_DRAG_SNAP_MINUTES. */
+function quickMinuteChoices(): number[] {
+  const choices: number[] = [];
+  for (let m = 0; m < 60; m += SCHEDULE_DRAG_SNAP_MINUTES) choices.push(m);
+  return choices;
+}
+
+function clampHourSelect(h: number): number {
+  return Math.min(Math.max(h, DAY_START_HOUR), DAY_END_HOUR);
+}
+
+function nearestChoice(value: number, choices: readonly number[]): number {
+  let best = choices[0] ?? 0;
+  let bestDiff = Infinity;
+  for (const v of choices) {
+    const d = Math.abs(v - value);
+    if (d < bestDiff || (d === bestDiff && v < best)) {
+      best = v;
+      bestDiff = d;
+    }
+  }
+  return best;
+}
+
+function hourMinuteFromPointerInTimeline(
+  clientY: number,
+  slotEl: HTMLElement,
+): { hour: number; minute: number } | null {
+  const metrics = getTimelineSlotInnerBox(slotEl);
+  if (!metrics || metrics.innerHeight <= 0) return null;
+
+  let relYC = clientY - metrics.innerTopViewport;
+  relYC = clamp01(relYC / metrics.innerHeight) * metrics.innerHeight;
+
+  const iso = dueIsoFromTimelineCenterAndHeight(
+    relYC,
+    metrics.innerHeight,
+    isoTodayAtHourMinute(12, 0),
+  );
+
   const d = new Date(iso);
-  const h = d.getHours();
-  const idx = h - DAY_START_HOUR;
-  const span = DAY_END_HOUR - DAY_START_HOUR + 1;
-  return Math.min(Math.max(idx, 0), span - 1);
+  return {
+    hour: clampHourSelect(d.getHours()),
+    minute: nearestChoice(d.getMinutes(), quickMinuteChoices()),
+  };
+}
+
+function dueTopPct(iso: string): number {
+  const startMins = DAY_START_HOUR * 60;
+  const endMins = (DAY_END_HOUR + 1) * 60;
+  const d = new Date(iso);
+  let cur = d.getHours() * 60 + d.getMinutes();
+  cur = Math.max(startMins, Math.min(endMins, cur));
+  const total = endMins - startMins;
+  return ((cur - startMins) / total) * 100;
+}
+
+function taskTimelineAnchorIso(
+  task: Pick<Task, "dueAt" | "scheduledFromAt">,
+): string {
+  const f = task.scheduledFromAt?.trim();
+  return f ?? task.dueAt;
+}
+
+type TimelinePlacement = { task: Task; topPx: number };
+
+function placeTasksOnTimeline(
+  tasks: Task[],
+  gridHeightPx: number,
+): TimelinePlacement[] {
+  const sorted = [...tasks].sort(
+    (a, b) => taskOpenSortKey(a) - taskOpenSortKey(b),
+  );
+
+  let prevBottom = -1;
+  const out: TimelinePlacement[] = [];
+
+  for (const task of sorted) {
+    const center = (dueTopPct(taskTimelineAnchorIso(task)) / 100) * gridHeightPx;
+    let topPx = center - TIMELINE_BLOCK_EST_HEIGHT_PX / 2;
+    topPx = Math.max(
+      TIMELINE_BLOCK_MIN_GAP_PX,
+      Math.min(
+        gridHeightPx - TIMELINE_BLOCK_EST_HEIGHT_PX - TIMELINE_BLOCK_MIN_GAP_PX,
+        topPx,
+      ),
+    );
+    if (prevBottom >= 0 && topPx < prevBottom + TIMELINE_BLOCK_MIN_GAP_PX) {
+      topPx = prevBottom + TIMELINE_BLOCK_MIN_GAP_PX;
+      topPx = Math.min(
+        gridHeightPx - TIMELINE_BLOCK_EST_HEIGHT_PX - TIMELINE_BLOCK_MIN_GAP_PX,
+        topPx,
+      );
+    }
+    prevBottom = topPx + TIMELINE_BLOCK_EST_HEIGHT_PX;
+    out.push({ task, topPx });
+  }
+
+  return out;
 }
 
 function formatShortTime(iso: string) {
@@ -96,15 +316,24 @@ function TimetableTaskBlock({
   task,
   onToggle,
   onOpen,
+  onGripPointerDown,
+  dragging,
+  scheduledTimeDisplay,
 }: {
   task: Task;
   onToggle: (id: string) => void;
   onOpen: () => void;
+  /** Grip control: drag up/down on the timeline to move the scheduled time. */
+  onGripPointerDown?: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+  dragging?: boolean;
+  /** During drag overlay: shown instead of parsing task.dueAt for the badge. */
+  scheduledTimeDisplay?: string;
 }) {
   const { deals } = useDeals();
   const { companies } = useCompanies();
   const { leads } = useLeads();
   const { contacts } = useContacts();
+  const { goals } = useGoals();
   const relatedLine = useMemo(
     () =>
       formatTaskRelatedLine(task, {
@@ -112,11 +341,15 @@ function TimetableTaskBlock({
         companies,
         leads,
         contacts,
+        goals,
       }),
-    [task, deals, companies, leads, contacts],
+    [task, deals, companies, leads, contacts, goals],
   );
 
   const overdue = isOverdue(task.dueAt, task.done);
+
+  const displayedTime =
+    scheduledTimeDisplay ?? formatTaskScheduleLine(task);
 
   return (
     <div
@@ -131,9 +364,11 @@ function TimetableTaskBlock({
         }
       }}
       className={cn(
-        "relative flex min-h-[38px] cursor-pointer gap-2 rounded-none border border-white/[0.08] bg-[color-mix(in_oklab,var(--card)_90%,transparent)] p-2.5 text-left backdrop-blur-sm transition-colors hover:border-white/[0.14]",
+        "relative flex min-h-[38px] cursor-pointer gap-1.5 rounded-none border border-white/[0.08] bg-[color-mix(in_oklab,var(--card)_90%,transparent)] p-2.5 text-left backdrop-blur-sm transition-[border-color,box-shadow,opacity] hover:border-white/[0.14]",
         task.done && "opacity-[0.65]",
         overdue && !task.done && "border-rose-400/30",
+        dragging &&
+          "ring-primary/50 shadow-primary/25 z-40 ring-2 ring-offset-1 ring-offset-[color-mix(in_oklab,var(--card)_92%,transparent)]",
       )}
     >
       <div
@@ -142,11 +377,33 @@ function TimetableTaskBlock({
           priorityAccent(task.priority),
         )}
       />
+      {onGripPointerDown ? (
+        <button
+          type="button"
+          aria-label="Drag up or down to reschedule this task"
+          className={cn(
+            "relative z-[1] flex h-11 w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-none border border-transparent text-muted-foreground transition-colors hover:border-white/[0.1] hover:text-foreground active:cursor-grabbing",
+          )}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            onGripPointerDown(e);
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="size-[18px] opacity-85" aria-hidden />
+        </button>
+      ) : null}
       <button
         type="button"
         role="checkbox"
         aria-checked={task.done}
-        aria-label={task.done ? "Mark as open" : "Mark as done"}
+        aria-label={
+          task.done
+            ? "Mark as open"
+            : task.repeatDaily
+              ? "Finish today — reschedule for tomorrow at the same time"
+              : "Mark as done"
+        }
         onClick={(e) => {
           e.stopPropagation();
           onToggle(task.id);
@@ -171,10 +428,20 @@ function TimetableTaskBlock({
           <span className="text-muted-foreground text-[9px] font-semibold tracking-[0.14em] uppercase">
             {priorityLabel(task.priority)}
           </span>
-          <span className="text-foreground/85 flex items-center gap-1 text-[10px] font-medium tabular-nums">
+          <span
+            className={cn(
+              "text-foreground/85 flex items-center gap-1 text-[10px] font-medium tabular-nums transition-colors",
+              dragging && scheduledTimeDisplay && "text-primary",
+            )}
+          >
             <Clock3 className="size-3 opacity-70" aria-hidden />
-            {formatShortTime(task.dueAt)}
+            {displayedTime}
           </span>
+          {task.repeatDaily ? (
+            <span className="text-primary/95 border-primary/35 rounded-none border px-1.5 py-0.5 text-[8px] font-semibold tracking-wide uppercase">
+              Daily
+            </span>
+          ) : null}
         </div>
         <p
           className={cn(
@@ -193,7 +460,7 @@ function TimetableTaskBlock({
 }
 
 export function TodayPageClient() {
-  const { tasks, addTask, toggleTask } = useTasks();
+  const { tasks, addTask, toggleTask, updateTask } = useTasks();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const nowTs = useNowMinute();
 
@@ -202,6 +469,7 @@ export function TodayPageClient() {
   const [quickMinute, setQuickMinute] = useState(0);
   const [quickPriority, setQuickPriority] =
     useState<TaskPriority>("medium");
+  const [quickRepeatDaily, setQuickRepeatDaily] = useState(false);
   const [quickError, setQuickError] = useState<string | null>(null);
 
   const selectedTask = useMemo(
@@ -220,16 +488,19 @@ export function TodayPageClient() {
     overdueOpen,
     mitCandidates,
     overviewStats,
-    tasksByHour,
+    timelineTasks,
     hourLabels,
   } = useMemo(() => {
+    const anchorNow = nowTs;
     const open = tasks.filter((t) => !t.done);
     const doneToday = tasks.filter(
       (t) => t.done && isDueToday(t.dueAt),
     );
 
     const overdue = open.filter((t) => isOverdue(t.dueAt, false));
-    const dueToday = open.filter((t) => isDueToday(t.dueAt));
+    const dueToday = open.filter((t) =>
+      taskTouchesTodayCalendar(t, anchorNow),
+    );
 
     const sortedMit = [...dueToday].sort((a, b) => {
       const pr: Record<TaskPriority, number> = {
@@ -239,27 +510,21 @@ export function TodayPageClient() {
       };
       const p = pr[a.priority] - pr[b.priority];
       if (p !== 0) return p;
-      return new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime();
+      return taskOpenSortKey(a) - taskOpenSortKey(b);
     });
     const mit = sortedMit.slice(0, 3);
 
-    const byHour = new Map<number, Task[]>();
     const span = DAY_END_HOUR - DAY_START_HOUR + 1;
-    for (let i = 0; i < span; i++) {
-      byHour.set(i, []);
-    }
 
-    for (const t of [...dueToday, ...doneToday]) {
-      const idx = hourBucketIndex(t.dueAt);
-      byHour.get(idx)!.push(t);
-    }
-
-    for (const [, list] of byHour) {
-      list.sort(
-        (a, b) =>
-          new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime(),
-      );
-    }
+    const timelineSorted = [...dueToday, ...doneToday].sort((a, b) => {
+      const ak = a.done
+        ? new Date(a.dueAt).getTime()
+        : taskOpenSortKey(a);
+      const bk = b.done
+        ? new Date(b.dueAt).getTime()
+        : taskOpenSortKey(b);
+      return ak - bk;
+    });
 
     const labels = Array.from(
       { length: span },
@@ -277,10 +542,216 @@ export function TodayPageClient() {
         todayOpenN: dueToday.length,
         doneTodayN: doneToday.length,
       },
-      tasksByHour: byHour,
+      timelineTasks: timelineSorted,
       hourLabels: labels,
     };
-  }, [tasks]);
+  }, [tasks, nowTs]);
+
+  const gridBodyHeight =
+    hourLabels.length * ROW_HEIGHT_PX + BLOCK_MIN_HEIGHT * 0.25;
+
+  const timelinePlacements = useMemo(
+    () => placeTasksOnTimeline(timelineTasks, gridBodyHeight),
+    [timelineTasks, gridBodyHeight],
+  );
+
+  const timelinePadRef = useRef<HTMLDivElement | null>(null);
+  const quickTitleInputRef = useRef<HTMLInputElement>(null);
+  const timelineDragSessionRef = useRef<TimelineDragSession | null>(null);
+  const [timelineDrag, setTimelineDrag] = useState<{
+    taskId: string;
+    topPx: number;
+    previewLabel: string;
+  } | null>(null);
+
+  const [timelineHover, setTimelineHover] = useState<{
+    anchorYpx: number;
+    label: string;
+  } | null>(null);
+
+  const quickMinuteOptions = useMemo(() => quickMinuteChoices(), []);
+
+  useEffect(() => {
+    if (timelineDrag !== null) setTimelineHover(null);
+  }, [timelineDrag]);
+
+  const paintTimelineHover = useCallback((clientY: number) => {
+    const pad = timelinePadRef.current;
+    if (!pad || timelineDrag !== null || timelineDragSessionRef.current !== null) {
+      return;
+    }
+    const metrics = getTimelineSlotInnerBox(pad);
+    if (!metrics || metrics.innerHeight <= 0) return;
+    const raw = clientY - metrics.innerTopViewport;
+    const relYC = Math.min(Math.max(raw, 0), metrics.innerHeight);
+
+    const anchorIso = isoTodayAtHourMinute(12, 0);
+    setTimelineHover({
+      anchorYpx: relYC,
+      label: tentativeTimeLabel(relYC, metrics.innerHeight, anchorIso),
+    });
+  }, [timelineDrag]);
+
+  const jumpQuickCaptureFromTimeline = useCallback(
+    (clientY: number) => {
+      if (timelineDrag !== null) return;
+      const pad = timelinePadRef.current;
+      if (!pad) return;
+      const hm = hourMinuteFromPointerInTimeline(clientY, pad);
+      if (!hm) return;
+
+      setQuickHour(hm.hour);
+      setQuickMinute(hm.minute);
+      setQuickError(null);
+      queueMicrotask(() =>
+        quickTitleInputRef.current?.focus({ preventScroll: true }),
+      );
+    },
+    [timelineDrag],
+  );
+
+  const startTimelineDrag = useCallback(
+    (
+      event: ReactPointerEvent<HTMLButtonElement>,
+      task: Task,
+      placementTopPx: number,
+    ) => {
+      const gripEl = event.currentTarget;
+      const slotEl = timelinePadRef.current;
+      const row = gripEl.closest("[data-drag-row]");
+
+      if (!slotEl || !row || !(row instanceof HTMLElement)) return;
+
+      event.preventDefault();
+
+      const rowRect = row.getBoundingClientRect();
+      const grabOffsetY = event.clientY - rowRect.top;
+
+      timelineDragSessionRef.current = {
+        pointerId: event.pointerId,
+        task,
+        grabOffsetY,
+        lastTopPx: placementTopPx,
+      };
+
+      const metricsInitial = getTimelineSlotInnerBox(slotEl);
+      const centerPreview =
+        placementTopPx + TIMELINE_BLOCK_EST_HEIGHT_PX / 2;
+
+      setTimelineDrag({
+        taskId: task.id,
+        topPx: placementTopPx,
+        previewLabel: metricsInitial
+          ? tentativeWindowPreview(
+              centerPreview,
+              metricsInitial.innerHeight,
+              task,
+            )
+          : formatTaskScheduleLine(task),
+      });
+      setTimelineHover(null);
+
+      try {
+        gripEl.setPointerCapture(event.pointerId);
+      } catch {
+        /* ignore unsupported capture edge cases */
+      }
+
+      const onMove = (ev: PointerEvent) => {
+        const sess = timelineDragSessionRef.current;
+        if (!sess || ev.pointerId !== sess.pointerId) return;
+        const m = getTimelineSlotInnerBox(slotEl);
+        if (!m) return;
+        const rawTop =
+          ev.clientY - m.innerTopViewport - sess.grabOffsetY;
+        const topPx = clampTimelineTop(rawTop, m.innerHeight);
+        sess.lastTopPx = topPx;
+        const centerYInside = topPx + TIMELINE_BLOCK_EST_HEIGHT_PX / 2;
+
+        setTimelineDrag({
+          taskId: sess.task.id,
+          topPx,
+          previewLabel: tentativeWindowPreview(
+            centerYInside,
+            m.innerHeight,
+            sess.task,
+          ),
+        });
+      };
+
+      const onUpOrCancel = (ev: PointerEvent) => {
+        const sess = timelineDragSessionRef.current;
+        if (!sess || ev.pointerId !== sess.pointerId) return;
+
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUpOrCancel);
+        window.removeEventListener("pointercancel", onUpOrCancel);
+
+        timelineDragSessionRef.current = null;
+        try {
+          gripEl.releasePointerCapture(ev.pointerId);
+        } catch {
+          /* noop */
+        }
+
+        const m = getTimelineSlotInnerBox(slotEl);
+        if (!m) {
+          setTimelineDrag(null);
+          return;
+        }
+
+        const centerYInside =
+          sess.lastTopPx + TIMELINE_BLOCK_EST_HEIGHT_PX / 2;
+        const baseIso = taskTimelineAnchorIso(sess.task);
+        const nextAnchorIso = dueIsoFromTimelineCenterAndHeight(
+          centerYInside,
+          m.innerHeight,
+          baseIso,
+        );
+
+        const rawFrom = sess.task.scheduledFromAt?.trim();
+
+        if (rawFrom) {
+          const dur =
+            new Date(sess.task.dueAt).getTime() -
+            new Date(rawFrom).getTime();
+          if (!(dur > 0)) {
+            setTimelineDrag(null);
+            return;
+          }
+          const nextToIso = new Date(
+            new Date(nextAnchorIso).getTime() + dur,
+          ).toISOString();
+
+          const changed =
+            new Date(sess.task.scheduledFromAt!).getTime() !==
+              new Date(nextAnchorIso).getTime() ||
+            new Date(sess.task.dueAt).getTime() !==
+              new Date(nextToIso).getTime();
+
+          if (changed) {
+            updateTask(sess.task.id, {
+              scheduledFromAt: nextAnchorIso,
+              dueAt: nextToIso,
+            });
+          }
+        } else {
+          const prevTs = new Date(sess.task.dueAt).getTime();
+          const nextTs = new Date(nextAnchorIso).getTime();
+          if (nextTs !== prevTs) {
+            updateTask(sess.task.id, { dueAt: nextAnchorIso });
+          }
+        }
+
+        setTimelineDrag(null);
+      };
+
+      window.addEventListener("pointermove", onMove, { passive: true });
+      window.addEventListener("pointerup", onUpOrCancel);
+      window.addEventListener("pointercancel", onUpOrCancel);
+    },
+    [updateTask],
+  );
 
   const nowLinePct = useMemo(() => {
     const now = new Date(nowTs);
@@ -310,19 +781,25 @@ export function TodayPageClient() {
         relatedId: null,
         dueAt: iso,
         priority: quickPriority,
+        repeatDaily: quickRepeatDaily,
         assignee: "You",
       });
       setQuickTitle("");
       setQuickError(null);
+      setQuickRepeatDaily(false);
       setQuickHour(defaultQuickHour());
       setQuickMinute(0);
     } catch {
       setQuickError("Could not schedule that slot.");
     }
-  }, [addTask, quickHour, quickMinute, quickPriority, quickTitle]);
-
-  const gridBodyHeight =
-    hourLabels.length * ROW_HEIGHT_PX + BLOCK_MIN_HEIGHT * 0.25;
+  }, [
+    addTask,
+    quickHour,
+    quickMinute,
+    quickPriority,
+    quickRepeatDaily,
+    quickTitle,
+  ]);
 
   return (
     <div className="space-y-8">
@@ -407,7 +884,7 @@ export function TodayPageClient() {
                     {t.title}
                   </span>
                   <span className="text-muted-foreground shrink-0 text-[10px] tabular-nums">
-                    {formatShortTime(t.dueAt)}
+                    {formatTaskScheduleLine(t)}
                   </span>
                 </button>
               </li>
@@ -425,8 +902,9 @@ export function TodayPageClient() {
                 Day timeline
               </h2>
               <p className="text-muted-foreground mt-0.5 max-w-lg text-[11px] leading-relaxed tracking-wide">
-                Hour rows are time boxes: group work in 60-90 minute deep
-                blocks, leave buffer between commitments.
+                Drag by the grip to reschedule. Click empty space to set Quick
+                Capture start time (snap: {SCHEDULE_DRAG_SNAP_MINUTES}&nbsp;min).
+                Move the mouse to preview the snapped time.
               </p>
             </div>
           </header>
@@ -476,29 +954,81 @@ export function TodayPageClient() {
                   </div>
                 ) : null}
 
-                <div className="absolute inset-0 z-10 px-2 pt-1 pb-2">
-                  {hourLabels.map((h, rowIdx) => {
-                    const blocks = tasksByHour.get(rowIdx) ?? [];
-                    return (
-                      <div
-                        key={h}
-                        className="absolute right-2 left-2 flex flex-col gap-1.5"
-                        style={{
-                          top: rowIdx * ROW_HEIGHT_PX + 4,
-                          minHeight: ROW_HEIGHT_PX - 8,
-                        }}
-                      >
-                        {blocks.map((task) => (
+                <div
+                  ref={timelinePadRef}
+                  className="pointer-events-none absolute inset-0 px-2 pt-1 pb-2"
+                  style={{ zIndex: 10 }}
+                >
+                  {timelineHover && !timelineDrag ? (
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute right-5 left-5 z-[14] -translate-y-1/2 border-t border-dashed border-white/[0.42]"
+                      style={{ top: timelineHover.anchorYpx }}
+                    >
+                      <span className="border-primary/35 bg-[color-mix(in_oklab,var(--card)_92%,transparent)] text-primary absolute -top-3.5 right-0 border px-2 py-0.5 text-[10px] font-semibold tabular-nums backdrop-blur-sm">
+                        {timelineHover.label}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    aria-label={
+                      timelineDrag === null
+                        ? "Pick a time slot for Quick Capture — click anywhere on this grid"
+                        : undefined
+                    }
+                    tabIndex={timelineDrag !== null ? -1 : 0}
+                    className={cn(
+                      "absolute inset-x-2 top-1 bottom-2 z-[12] rounded-none bg-transparent outline-none hover:bg-black/[0.025] dark:hover:bg-white/[0.035]",
+                      timelineDrag !== null &&
+                        "pointer-events-none invisible",
+                      "cursor-crosshair transition-colors active:bg-black/[0.04] dark:active:bg-white/[0.07]",
+                      "focus-visible:ring-primary ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[color-mix(in_oklab,var(--card)_94%,transparent)]",
+                    )}
+                    onMouseMove={(e) => paintTimelineHover(e.clientY)}
+                    onMouseLeave={() => setTimelineHover(null)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      jumpQuickCaptureFromTimeline(e.clientY);
+                    }}
+                  />
+
+                  <div className="pointer-events-none relative z-[20] pt-px">
+                    {timelinePlacements.map(({ task, topPx }) => {
+                      const isDraggingSlot =
+                        timelineDrag?.taskId === task.id;
+                      const displayTop = isDraggingSlot
+                        ? timelineDrag.topPx
+                        : topPx;
+                      return (
+                        <div
+                          key={task.id}
+                          data-drag-row=""
+                          className={cn(
+                            "pointer-events-auto absolute right-2 left-2",
+                            isDraggingSlot && "z-[50]",
+                          )}
+                          style={{ top: displayTop }}
+                        >
                           <TimetableTaskBlock
-                            key={task.id}
                             task={task}
                             onToggle={toggleTask}
                             onOpen={() => setSelectedId(task.id)}
+                            onGripPointerDown={(e) =>
+                              startTimelineDrag(e, task, topPx)
+                            }
+                            dragging={isDraggingSlot}
+                            scheduledTimeDisplay={
+                              isDraggingSlot
+                                ? timelineDrag.previewLabel
+                                : undefined
+                            }
                           />
-                        ))}
-                      </div>
-                    );
-                  })}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
@@ -528,6 +1058,7 @@ export function TodayPageClient() {
                 Task title
               </label>
               <input
+                ref={quickTitleInputRef}
                 id="today-quick-title"
                 value={quickTitle}
                 onChange={(e) => {
@@ -574,7 +1105,7 @@ export function TodayPageClient() {
                     }
                     className="border-sidebar-border bg-background/80 h-10 min-w-[72px] rounded-none border border-white/[0.08] px-2 text-[12px]"
                   >
-                    {[0, 15, 30, 45].map((m) => (
+                    {quickMinuteOptions.map((m) => (
                       <option key={m} value={m}>
                         :{String(m).padStart(2, "0")}
                       </option>
@@ -600,6 +1131,25 @@ export function TodayPageClient() {
                   </button>
                 ))}
               </div>
+
+              <label className="text-muted-foreground flex cursor-pointer items-start gap-3 text-[11px] leading-snug">
+                <input
+                  type="checkbox"
+                  checked={quickRepeatDaily}
+                  onChange={(e) =>
+                    setQuickRepeatDaily(e.target.checked)
+                  }
+                  className="border-sidebar-border accent-primary mt-0.5 size-4 shrink-0 rounded-none border border-white/[0.12] bg-transparent"
+                />
+                <span>
+                  <span className="text-foreground font-semibold">
+                    Repeat daily
+                  </span>
+                  <span className="text-muted-foreground block font-normal">
+                    Checked off bumps this to tomorrow at this time.
+                  </span>
+                </span>
+              </label>
 
               {quickError ? (
                 <p className="text-[11px] text-rose-300/95">{quickError}</p>
@@ -648,8 +1198,9 @@ export function TodayPageClient() {
                           {t.title}
                         </p>
                         <p className="text-muted-foreground mt-1 text-[10px] tracking-wide uppercase">
-                          {priorityLabel(t.priority)} ·{" "}
-                          {formatShortTime(t.dueAt)}
+                          {priorityLabel(t.priority)}
+                          {t.repeatDaily ? " · daily" : ""} ·{" "}
+                          {formatTaskScheduleLine(t)}
                         </p>
                       </div>
                     </button>

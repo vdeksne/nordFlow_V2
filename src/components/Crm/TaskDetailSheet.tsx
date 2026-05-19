@@ -39,8 +39,10 @@ export function TaskDetailSheet({
   const [title, setTitle] = useState("");
   const [relatedKind, setRelatedKind] = useState<TaskRelatedKind>("none");
   const [relatedId, setRelatedId] = useState<string | null>(null);
+  const [fromLocal, setFromLocal] = useState("");
   const [dueLocal, setDueLocal] = useState("");
   const [priority, setPriority] = useState<Task["priority"]>("medium");
+  const [repeatDaily, setRepeatDaily] = useState(false);
   const [assignee, setAssignee] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [deleteStep, setDeleteStep] = useState(false);
@@ -51,8 +53,14 @@ export function TaskDetailSheet({
       setTitle(task.title);
       setRelatedKind(task.relatedKind);
       setRelatedId(task.relatedId);
+      setFromLocal(
+        task.scheduledFromAt
+          ? toDatetimeLocalValue(task.scheduledFromAt)
+          : "",
+      );
       setDueLocal(toDatetimeLocalValue(task.dueAt));
       setPriority(task.priority);
+      setRepeatDaily(task.repeatDaily);
       setAssignee(task.assignee === "You" ? "" : task.assignee);
       setError(null);
       setDeleteStep(false);
@@ -71,11 +79,35 @@ export function TaskDetailSheet({
     try {
       dueIso = fromDatetimeLocalValue(dueLocal);
       if (Number.isNaN(new Date(dueIso).getTime())) {
-        setError("Pick a valid due date and time.");
+        setError("Pick a valid To date and time.");
         return;
       }
     } catch {
-      setError("Pick a valid due date and time.");
+      setError("Pick a valid To date and time.");
+      return;
+    }
+
+    let scheduledFromAt: string | null = null;
+    const trimmedFrom = fromLocal.trim();
+    if (trimmedFrom) {
+      try {
+        const parsed = fromDatetimeLocalValue(trimmedFrom);
+        if (Number.isNaN(new Date(parsed).getTime())) {
+          setError("Pick a valid From time, or clear the field.");
+          return;
+        }
+        scheduledFromAt = parsed;
+      } catch {
+        setError("Pick a valid From time, or clear the field.");
+        return;
+      }
+    }
+
+    if (
+      scheduledFromAt &&
+      new Date(scheduledFromAt).getTime() > new Date(dueIso).getTime()
+    ) {
+      setError("From must be the same moment or earlier than To.");
       return;
     }
 
@@ -88,8 +120,10 @@ export function TaskDetailSheet({
       title: trimmed,
       relatedKind,
       relatedId: relatedKind === "none" ? null : relatedId,
+      scheduledFromAt,
       dueAt: dueIso,
       priority,
+      repeatDaily,
       assignee: assignee.trim() || "You",
     });
     setError(null);
@@ -97,12 +131,14 @@ export function TaskDetailSheet({
   }, [
     assignee,
     dueLocal,
+    fromLocal,
     onOpenChange,
     priority,
     relatedId,
     relatedKind,
     task,
     title,
+    repeatDaily,
     updateTask,
   ]);
 
@@ -115,8 +151,12 @@ export function TaskDetailSheet({
 
   const handleMarkToggle = useCallback(() => {
     if (!task) return;
+    const rollsForward = task.repeatDaily && !task.done;
     toggleTask(task.id);
-  }, [task, toggleTask]);
+    if (rollsForward) {
+      queueMicrotask(() => onOpenChange(false));
+    }
+  }, [onOpenChange, task, toggleTask]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -131,8 +171,8 @@ export function TaskDetailSheet({
                 {title.trim() || "Task details"}
               </SheetTitle>
               <SheetDescription>
-                Full view, edit fields, toggle completion, or delete from your
-                queue.
+                Full view — link to Goals, CRM records, or inbox. Toggle
+                completion or delete from your queue.
               </SheetDescription>
             </SheetHeader>
 
@@ -146,7 +186,11 @@ export function TaskDetailSheet({
                     task.done && "border-primary text-primary",
                   )}
                 >
-                  {task.done ? "Reopen task" : "Mark complete"}
+                  {task.done
+                    ? "Reopen task"
+                    : task.repeatDaily
+                      ? "Finish for today"
+                      : "Mark complete"}
                 </button>
                 <span className="text-muted-foreground text-[11px] tracking-wide">
                   Updates instantly on the board.
@@ -200,20 +244,57 @@ export function TaskDetailSheet({
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="detail-task-due"
-                  className="text-muted-foreground text-xs font-medium"
-                >
-                  Due
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="detail-task-from"
+                    className="text-muted-foreground text-xs font-medium"
+                  >
+                    From{" "}
+                    <span className="text-muted-foreground/70">(optional)</span>
+                  </label>
+                  <Input
+                    id="detail-task-from"
+                    type="datetime-local"
+                    value={fromLocal}
+                    onChange={(e) => setFromLocal(e.target.value)}
+                    className="h-10 rounded-none border-white/[0.08] bg-[color-mix(in_oklab,var(--card)_55%,transparent)] [color-scheme:dark]"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="detail-task-to"
+                    className="text-foreground text-xs font-medium"
+                  >
+                    To<span className="text-primary"> *</span>
+                  </label>
+                  <Input
+                    id="detail-task-to"
+                    type="datetime-local"
+                    value={dueLocal}
+                    onChange={(e) => setDueLocal(e.target.value)}
+                    className="h-10 rounded-none border-white/[0.08] bg-[color-mix(in_oklab,var(--card)_55%,transparent)] [color-scheme:dark]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-muted-foreground flex cursor-pointer items-start gap-3 text-xs leading-snug">
+                  <input
+                    type="checkbox"
+                    checked={repeatDaily}
+                    onChange={(e) => setRepeatDaily(e.target.checked)}
+                    className="border-sidebar-border accent-primary mt-0.5 size-4 shrink-0 rounded-none border border-white/[0.12] bg-transparent"
+                  />
+                  <span>
+                    <span className="text-foreground font-semibold">
+                      Repeat daily
+                    </span>
+                    <span className="text-muted-foreground block font-normal tracking-wide">
+                      Finishing advances the From–To window by one calendar day.
+                    </span>
+                  </span>
                 </label>
-                <Input
-                  id="detail-task-due"
-                  type="datetime-local"
-                  value={dueLocal}
-                  onChange={(e) => setDueLocal(e.target.value)}
-                  className="h-10 rounded-none border-white/[0.08] bg-[color-mix(in_oklab,var(--card)_55%,transparent)] [color-scheme:dark]"
-                />
               </div>
 
               <div className="space-y-1.5">

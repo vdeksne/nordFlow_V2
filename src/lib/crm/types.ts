@@ -77,15 +77,25 @@ export type Deal = {
 
 export type TaskPriority = "low" | "medium" | "high";
 
-export type TaskRelatedKind = "deal" | "company" | "contact" | "lead" | "none";
+export type TaskRelatedKind =
+  | "deal"
+  | "company"
+  | "contact"
+  | "lead"
+  | "goal"
+  | "none";
 
 export type Task = {
   id: string;
   title: string;
   relatedKind: TaskRelatedKind;
   relatedId: string | null;
+  /** Optional window start; when set with dueAt, defines a From–To scheduled block. */
+  scheduledFromAt: string | null;
   dueAt: string;
   priority: TaskPriority;
+  /** When checked off while open: due moves forward one calendar day instead of resting in Done. */
+  repeatDaily: boolean;
   done: boolean;
   assignee: string;
 };

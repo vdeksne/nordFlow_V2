@@ -428,7 +428,7 @@ export function DashboardCharts({
   const pieData =
     pieSlices.length > 0
       ? pieSlices
-      : [{ name: "Feed your funnel", value: 1 }];
+      : [{ name: "Grow your picture slowly", value: 1 }];
 
   const scatterPlotData: BubbleDealDatum[] =
     dealBubbleData.length > 0
@@ -466,7 +466,7 @@ export function DashboardCharts({
               Glance
             </span>
             {" · "}
-            Two charts so you remember money exists between Slack pings.
+            Breadth of security and upside—still life first, spreadsheets second.
           </p>
         </div>
       ) : (
@@ -476,12 +476,12 @@ export function DashboardCharts({
               Momentum cockpit
             </p>
             <h2 className="text-foreground text-xl font-semibold tracking-tight md:text-2xl">
-              See the upside you&apos;re building, then push one more deal forward.
+              See traction without letting it eclipse the rest of your life.
             </h2>
             <p className="text-muted-foreground max-w-3xl text-sm leading-relaxed">
-              Composition of booked revenue, recurring portfolio, probability-weighted
-              pipeline, and fresh leads. Charts blend mock CRM rows with your live
-              customers & tasks so the board feels personal.
+              Mix of booked work, repeating income, probability-weighted pipeline,
+              and new conversations—grounded signals while you steer toward bigger
+              goals.
             </p>
           </div>
         </div>
@@ -491,11 +491,12 @@ export function DashboardCharts({
         <Card className="border-sidebar-border lg:col-span-8 overflow-hidden border-white/[0.06] bg-[color-mix(in_oklab,var(--card)_88%,transparent)] shadow-none backdrop-blur-md">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold tracking-tight">
-              Upside trajectory
+              Stability vs stretch over time
             </CardTitle>
             <CardDescription>
-              Two curves: optimistic stretch toward combined potential vs a
-              conservative runway anchored on weighted deals.
+              Stretch imagines fuller capacity; runway stays closer to weighted
+              reality—income serves the life you&apos;re designing, not the other way
+              around.
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] pt-2 pr-2 pb-4 pl-0">
@@ -581,10 +582,11 @@ export function DashboardCharts({
         <Card className="border-sidebar-border lg:col-span-4 flex flex-col border-white/[0.06] bg-[color-mix(in_oklab,var(--card)_88%,transparent)] shadow-none backdrop-blur-md">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold tracking-tight">
-              Revenue mix
+              Where value lives today
             </CardTitle>
             <CardDescription>
-              Where value sits today, wins, fees, forecast, lead funnel.
+              Locked wins, retainers, pipeline, curious leads—nothing moralized,
+              just composition.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex min-h-[280px] flex-1 flex-col items-center justify-center pt-2">
@@ -639,8 +641,8 @@ export function DashboardCharts({
               </ul>
             ) : (
               <p className="text-muted-foreground mt-3 px-2 text-center text-xs leading-relaxed">
-                Layer wins, portfolio fees, and pipeline rows, your donut fills in
-                automatically.
+                As you log wins and relationships, this picture fills itself—money
+                is one layer of momentum, not the whole scoreboard.
               </p>
             )}
           </CardContent>
@@ -959,32 +961,32 @@ export function DashboardCharts({
                 Execution scores
               </CardTitle>
               <CardDescription>
-                Summary scores from tasks, win mix, and qualified lead density.
-                Close the loop to push these higher.
+                Summary signals from completions, closes, and real
+                conversations—you are more than these numbers.
               </CardDescription>
             </div>
             <p className="text-primary text-[10px] font-semibold tracking-[0.2em] uppercase">
-              Push · convert · compound
+              Close · nourish · widen
             </p>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-3">
               <GaugeRing
                 value={executionScore}
-                label="Task velocity"
-                hint="Done vs total, ship small completions daily."
+                label="Follow-through"
+                hint="Checked-off vs total reminders—steady beats heroic sprints."
                 icon={Zap}
               />
               <GaugeRing
                 value={winMixScore}
-                label="Win mix"
-                hint="Share of deals already won, defend & expand."
+                label="Earned closures"
+                hint="Closed work as share of portfolio—grounds confidence."
                 icon={Flame}
               />
               <GaugeRing
                 value={funnelHeatScore}
-                label="Qualification heat"
-                hint="Qualified share of leads, tighten handoffs."
+                label="Warm conversations"
+                hint="Qualified interest among leads—it is okay to prune the rest."
                 icon={Orbit}
               />
             </div>
@@ -1002,8 +1004,9 @@ export function DashboardCharts({
       >
         {lean ? (
           <>
-            Won · {formatEur(Math.round(wonSum))} · Open weighted ·{" "}
-            {formatEur(Math.round(weightedOpen))} · {openPipeline.length} deals in motion
+            Booked wins · {formatEur(Math.round(wonSum))} · Weighted horizon ·{" "}
+            {formatEur(Math.round(weightedOpen))} ·{" "}
+            {openPipeline.length} commitments moving
           </>
         ) : (
           <>

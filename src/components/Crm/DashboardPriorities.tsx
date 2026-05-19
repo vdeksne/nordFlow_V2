@@ -20,7 +20,9 @@ import type { Task, TaskPriority } from "@/lib/crm/types";
 import { useCompanies } from "./CompaniesContext";
 import { useContacts } from "./ContactsContext";
 import { useDeals } from "./DealsContext";
+import { useGoals } from "./GoalsContext";
 import { useLeads } from "./LeadsContext";
+import { formatTaskScheduleLine, taskOpenSortKey } from "./TaskFormShared";
 import { useTasks } from "./TasksContext";
 
 function priorityWeight(p: TaskPriority): number {
@@ -58,23 +60,12 @@ function priorityStyles(p: TaskPriority): {
   }
 }
 
-function formatDueCompact(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "-";
-  return new Intl.DateTimeFormat("en-GB", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(d);
-}
-
 function sortOpenTasks(tasks: Task[]): Task[] {
   const open = tasks.filter((t) => !t.done);
   return [...open].sort((a, b) => {
     const pw = priorityWeight(b.priority) - priorityWeight(a.priority);
     if (pw !== 0) return pw;
-    return new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime();
+    return taskOpenSortKey(a) - taskOpenSortKey(b);
   });
 }
 
@@ -86,11 +77,12 @@ function SpotlightCard({
   rank: number;
 }) {
   const ps = priorityStyles(task.priority);
-  const labels = ["Ship first", "Then", "Fine, fine"] as const;
+  const labels = ["Anchor first", "Then this", "If there is still room"] as const;
   const { deals } = useDeals();
   const { companies } = useCompanies();
   const { leads } = useLeads();
   const { contacts } = useContacts();
+  const { goals } = useGoals();
   const relatedLine = useMemo(
     () =>
       formatTaskRelatedLine(task, {
@@ -98,8 +90,9 @@ function SpotlightCard({
         companies,
         leads,
         contacts,
+        goals,
       }),
-    [task, deals, companies, leads, contacts],
+    [task, deals, companies, leads, contacts, goals],
   );
 
   return (
@@ -126,7 +119,7 @@ function SpotlightCard({
             </p>
             <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-[11px] tabular-nums">
               <Calendar className="size-3 opacity-70" aria-hidden />
-              {formatDueCompact(task.dueAt)}
+              {formatTaskScheduleLine(task)}
             </p>
           </div>
         </div>
@@ -166,6 +159,7 @@ function RunnerRow({ task, index }: { task: Task; index: number }) {
   const { companies } = useCompanies();
   const { leads } = useLeads();
   const { contacts } = useContacts();
+  const { goals } = useGoals();
   const relatedLine = useMemo(
     () =>
       formatTaskRelatedLine(task, {
@@ -173,8 +167,9 @@ function RunnerRow({ task, index }: { task: Task; index: number }) {
         companies,
         leads,
         contacts,
+        goals,
       }),
-    [task, deals, companies, leads, contacts],
+    [task, deals, companies, leads, contacts, goals],
   );
 
   return (
@@ -197,7 +192,7 @@ function RunnerRow({ task, index }: { task: Task; index: number }) {
           >
             {ps.label}
           </span>
-          <span className="tabular-nums">{formatDueCompact(task.dueAt)}</span>
+          <span className="tabular-nums">{formatTaskScheduleLine(task)}</span>
           <span className="max-w-[min(100%,14rem)] truncate" title={relatedLine}>
             · {relatedLine}
           </span>
@@ -226,21 +221,22 @@ export function DashboardPrioritiesSection() {
             <div className="flex flex-wrap items-center gap-2">
               <span className="bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-none px-3 py-1 text-[10px] font-bold tracking-[0.2em] uppercase ring-1 ring-primary/18">
                 <Target className="size-3.5" aria-hidden />
-                Execute
+                Today&apos;s orbit
               </span>
               <span className="text-muted-foreground text-[11px] font-medium tracking-wide">
-                Three that matter · seven max before chaos
+                Top three anchors · seven max before overwhelm
               </span>
             </div>
             <h2
               id="dashboard-priorities-heading"
               className="text-foreground max-w-xl text-2xl font-semibold tracking-tight sm:text-3xl sm:leading-tight"
             >
-              Three things before lunch
+              Three moves worth your real attention
             </h2>
             <p className="text-muted-foreground max-w-lg text-sm leading-relaxed sm:text-[15px]">
-              Seven slots max - ranked by how loud they scream. Eat the frog(s).
-              Your LinkedIn scroll can wait; dinner rent cannot.
+              Tasks ranked by urgency, linked to CRM or goals—keep the sprint
+              small so life outside the sprint still exists. Tie work to outcomes
+              you actually care about, not just adrenaline.
             </p>
           </div>
           <Link
@@ -250,7 +246,7 @@ export function DashboardPrioritiesSection() {
               "gap-1.5",
             )}
           >
-            Full board
+            Full list
             <ArrowRight className="size-4" aria-hidden />
           </Link>
         </div>
@@ -263,11 +259,11 @@ export function DashboardPrioritiesSection() {
               <Layers className="size-7" aria-hidden />
             </div>
             <p className="text-lg font-semibold tracking-tight">
-              Nothing to dodge - sus, but okay
+              Clear runway on purpose
             </p>
             <p className="text-muted-foreground max-w-sm text-sm">
-              Either you shipped everything or you forgot to log work. Both
-              happen. Add tasks when reality returns.
+              No open tasks—or nothing logged yet. Add what matters so this board
+              reflects your real commitments, work and beyond.
             </p>
             <Link
               href="/tasks"
@@ -282,7 +278,7 @@ export function DashboardPrioritiesSection() {
             <div className="mb-3 flex items-center gap-2">
               <Flame className="size-4 text-rose-400/90" aria-hidden />
               <span className="text-muted-foreground text-[11px] font-semibold tracking-[0.18em] uppercase">
-                The rent-payers
+                Front three
               </span>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
@@ -296,10 +292,11 @@ export function DashboardPrioritiesSection() {
                       className="flex min-h-[200px] flex-col items-center justify-center rounded-none border border-dashed border-white/[0.08] bg-white/[0.02] px-4 text-center"
                     >
                       <p className="text-muted-foreground text-sm font-medium">
-                        Open slot - rare
+                        Open slot — space on purpose?
                       </p>
                       <p className="text-muted-foreground/70 mt-1 text-xs">
-                        Steal time back or add something worth doing
+                        Guard it for rest—or add something meaningful before the
+                        void fills itself.
                       </p>
                     </div>
                   ))
@@ -311,7 +308,7 @@ export function DashboardPrioritiesSection() {
                 <div className="mt-10 mb-3 flex items-center gap-2">
                   <Layers className="text-muted-foreground size-4" aria-hidden />
                   <span className="text-muted-foreground text-[11px] font-semibold tracking-[0.18em] uppercase">
-                    Guilt pile ({runners.length})
+                    Also on deck ({runners.length})
                   </span>
                 </div>
                 <ul className="grid list-none gap-2 p-0 sm:grid-cols-2">
