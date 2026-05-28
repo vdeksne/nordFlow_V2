@@ -1,9 +1,9 @@
 import type { Task, TaskPriority } from "@/lib/crm/types";
 
-/** Aligns with Today timeline (07:00–20:00 band) so new tasks land on “today” when possible. */
-const DEFAULT_LOCAL_DAY_START_H = 7;
-/** Last hour row on Today is 19:00 → 20:00 */
-const DEFAULT_LOCAL_TIMELINE_LAST_H = 19;
+/** Aligns with Today timeline (full local day 00:00–24:00 band). */
+const DEFAULT_LOCAL_DAY_START_H = 0;
+/** Last timeline hour row ends at midnight (snap stays same calendar day). */
+const DEFAULT_LOCAL_TIMELINE_LAST_H = 23;
 
 /**
  * Default due for new tasks: next free whole hour today inside the day timeline,

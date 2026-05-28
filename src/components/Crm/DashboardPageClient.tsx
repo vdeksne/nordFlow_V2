@@ -4,6 +4,7 @@ import { ArrowUpRight, Briefcase, TrendingUp, Zap } from "lucide-react";
 
 import { CrmPage } from "@/components/Crm/CrmPage";
 import { DashboardCharts } from "@/components/Crm/DashboardCharts";
+import { DashboardDailyReminder } from "@/components/Crm/DashboardDailyReminder";
 import { DashboardPrioritiesSection } from "@/components/Crm/DashboardPriorities";
 import { useDeals } from "@/components/Crm/DealsContext";
 import { useLeads } from "@/components/Crm/LeadsContext";
@@ -51,6 +52,7 @@ export function DashboardPageClient() {
       subtitle="A calm view across what pays the bills and what aligns with where you&apos;re aiming—few clear moves, fewer fantasies."
     >
       <div className="dashboard-focus space-y-8 sm:space-y-10">
+        <DashboardDailyReminder />
         <DashboardPrioritiesSection />
 
         <div className="space-y-3">
