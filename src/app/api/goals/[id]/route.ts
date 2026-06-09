@@ -3,12 +3,13 @@ import { NextResponse } from "next/server";
 import { getSessionFromCookies } from "@/lib/auth/get-session";
 import { isGoalAreaField } from "@/lib/crm/goal-areas";
 import { goalFromRow, type GoalRow } from "@/lib/goals/db-row";
+import { goalsWriteErrorResponse } from "@/lib/goals/write-error";
 import {
   isLongTermGoalOwnedByUser,
   isVisionParentGoalOwnedByUser,
 } from "@/lib/goals/long-term-parent";
 import { getNeonSql } from "@/lib/neon/client";
-import { isGoalHorizon } from "@/lib/crm/goal-horizons";
+import { isGoalHorizon, supportsOptionalVisionParent } from "@/lib/crm/goal-horizons";
 import type { GoalStatus } from "@/lib/crm/types";
 
 function isStatus(v: unknown): v is GoalStatus {
@@ -149,7 +150,7 @@ export async function PATCH(
   }
 
   let visionParentGoalId: string | null = null;
-  if (body.horizon === "long_term") {
+  if (supportsOptionalVisionParent(body.horizon)) {
     const rawVision = body.visionParentGoalId;
     if (rawVision !== undefined && rawVision !== null && rawVision !== "") {
       const vid =
@@ -180,7 +181,8 @@ export async function PATCH(
     }
   }
 
-  const updated = await sql`
+  try {
+    const updated = await sql`
     UPDATE public.app_goals
     SET horizon = ${body.horizon},
         long_term_goal_id = ${longTermGoalId},
@@ -211,14 +213,17 @@ export async function PATCH(
               updated_at::text AS updated_at
   `;
 
-  const row = updated[0] as GoalRow | undefined;
-  if (!row) {
-    return NextResponse.json({ ok: false, error: "Goal not found" }, {
-      status: 404,
-    });
-  }
+    const row = updated[0] as GoalRow | undefined;
+    if (!row) {
+      return NextResponse.json({ ok: false, error: "Goal not found" }, {
+        status: 404,
+      });
+    }
 
-  return NextResponse.json({ ok: true, goal: goalFromRow(row) });
+    return NextResponse.json({ ok: true, goal: goalFromRow(row) });
+  } catch (e: unknown) {
+    return goalsWriteErrorResponse(e);
+  }
 }
 
 export async function DELETE(

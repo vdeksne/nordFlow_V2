@@ -188,12 +188,13 @@ export type CustomerPortfolio = {
 };
 
 /**
- * Goal time horizons — near-term commits → strategic posture → ultra-long north stars.
+ * Goal time horizons - near-term commits → strategic posture → ultra-long north stars.
  * `short_term` attaches `longTermGoalId` (to an existing `long_term` goal).
  * Optional `visionParentGoalId` anchors `long_term` goals to any 5/10/20-year vision row.
  */
 export type GoalHorizon =
   | "short_term"
+  | "one_year"
   | "long_term"
   | "vision_5"
   | "vision_10"

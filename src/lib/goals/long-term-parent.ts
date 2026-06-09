@@ -2,7 +2,7 @@ import { getNeonSql } from "@/lib/neon/client";
 
 type NeonSql = NonNullable<ReturnType<typeof getNeonSql>>;
 
-/** True when `parentId` is a long-term goal row owned by `userId`. */
+/** True when `parentId` is a one-year or strategic goal row owned by `userId`. */
 export async function isLongTermGoalOwnedByUser(
   sql: NeonSql,
   userId: string,
@@ -12,7 +12,7 @@ export async function isLongTermGoalOwnedByUser(
     SELECT id FROM public.app_goals
     WHERE id = ${parentId}::uuid
       AND user_id = ${userId}::uuid
-      AND horizon = 'long_term'
+      AND horizon IN ('one_year', 'long_term')
     LIMIT 1
   `;
   return Array.isArray(rows) && rows.length > 0;

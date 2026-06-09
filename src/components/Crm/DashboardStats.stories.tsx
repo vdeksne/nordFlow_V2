@@ -13,7 +13,7 @@ function DashboardStatsDemo() {
     (sum, d) => sum + d.valueEur * (d.probability / 100),
     0,
   );
-  /** Story-only illustration — app tasks start empty for users */
+  /** Story-only illustration - app tasks start empty for users */
   const openTasksDemo = 11;
 
   return (

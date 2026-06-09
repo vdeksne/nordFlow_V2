@@ -150,7 +150,7 @@ export function AddTaskSheet() {
           <SheetTitle>New task</SheetTitle>
           <SheetDescription>
             Capture a next step. Link it to a goal, deal, contact, or keep it in
-            general inbox — <span className="text-foreground/90">To</span> is
+            general inbox - <span className="text-foreground/90">To</span> is
             required; optional <span className="text-foreground/90">From</span>{" "}
             starts the block.
           </SheetDescription>

@@ -1,7 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { Bolt, CheckCircle2, Compass, Crosshair, Orbit, Telescope, Sparkles } from "lucide-react";
+import { Bolt, CalendarRange, CheckCircle2, Compass, Crosshair, Orbit, Telescope, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -17,6 +17,7 @@ import {
   goalBoardColumnEyebrow,
   goalSpotlightEmptyCue,
   goalSpotlightLaneLabel,
+  isShortTermRollupParent,
   needsStrategicParent,
   supportsOptionalVisionParent,
 } from "@/lib/crm/goal-horizons";
@@ -151,6 +152,7 @@ function GoalsHorizonSpotlight({
   goals: Goal[];
   accent:
     | "short"
+    | "year1"
     | "long"
     | "vision5"
     | "vision10"
@@ -158,7 +160,7 @@ function GoalsHorizonSpotlight({
   Icon: LucideIcon;
   onOpenGoal: (id: string) => void;
   longTitleById: Record<string, string>;
-  /** For strategic spotlight — resolves optional vision anchors */
+  /** For strategic spotlight - resolves optional vision anchors */
   visionTitleById?: Record<string, string>;
 }) {
   const spotlight = goalsSpotlightList(goals, 4);
@@ -171,7 +173,9 @@ function GoalsHorizonSpotlight({
   const shell =
     accent === "short"
       ? "from-amber-500/[0.12] via-[color-mix(in_oklab,var(--card)_55%,transparent)] to-cyan-500/[0.06]"
-      : accent === "long"
+      : accent === "year1"
+        ? "from-sky-500/[0.13] via-[color-mix(in_oklab,var(--card)_55%,transparent)] to-cyan-500/[0.06]"
+        : accent === "long"
         ? "from-violet-500/[0.14] via-[color-mix(in_oklab,var(--card)_55%,transparent)] to-sky-500/[0.05]"
         : accent === "vision5"
           ? "from-cyan-500/[0.13] via-[color-mix(in_oklab,var(--card)_55%,transparent)] to-emerald-500/[0.06]"
@@ -182,7 +186,9 @@ function GoalsHorizonSpotlight({
   const corner =
     accent === "short"
       ? "text-amber-400/90"
-      : accent === "long"
+      : accent === "year1"
+        ? "text-sky-300/90"
+        : accent === "long"
         ? "text-violet-300/90"
         : accent === "vision5"
           ? "text-cyan-300/90"
@@ -193,7 +199,9 @@ function GoalsHorizonSpotlight({
   const rail =
     accent === "short"
       ? "bg-gradient-to-b from-amber-400/80 to-amber-600/40"
-      : accent === "long"
+      : accent === "year1"
+        ? "bg-gradient-to-b from-sky-400/80 to-cyan-600/40"
+        : accent === "long"
         ? "bg-gradient-to-b from-violet-400/80 to-indigo-600/40"
         : accent === "vision5"
           ? "bg-gradient-to-b from-cyan-400/80 to-teal-600/40"
@@ -477,7 +485,7 @@ export function GoalsPageClient() {
     () =>
       Object.fromEntries(
         goals
-          .filter((g) => g.horizon === "long_term")
+          .filter((g) => isShortTermRollupParent(g.horizon))
           .map((g) => [g.id, g.title] as const),
       ),
     [goals],
@@ -508,6 +516,7 @@ export function GoalsPageClient() {
     () => goalsForHorizon(goals, "short_term"),
     [goals],
   );
+  const oneYear = useMemo(() => goalsForHorizon(goals, "one_year"), [goals]);
   const longTerm = useMemo(() => goalsForHorizon(goals, "long_term"), [goals]);
 
   const vision5 = useMemo(
@@ -531,7 +540,7 @@ export function GoalsPageClient() {
   return (
     <CrmPage
       title="Goals"
-      subtitle="Quarterly execution, strategic runway, and 5 / 10 / 20-year vision lanes — skim above, drill into full boards below."
+      subtitle="Quarterly execution, one-year outcomes, strategic runway, and 5 / 10 / 20-year vision lanes - skim above, drill into full boards below."
     >
       <div className="dashboard-focus space-y-8 sm:space-y-10">
         <div className="flex flex-wrap items-center justify-end gap-3 border-b border-white/[0.06] pb-4">
@@ -589,17 +598,17 @@ export function GoalsPageClient() {
                   id="goals-spotlight-heading"
                   className="text-foreground text-xl font-semibold tracking-tight sm:text-2xl"
                 >
-                  Execution ladder vs strategic runway
+                  Execution ladder · near-term to one-year to strategic
                 </h2>
                 <p className="text-muted-foreground mt-1 max-w-2xl text-[13px] leading-relaxed">
-                  Near-term commits on the left roll up into multi-quarter posture on
-                  the right. Charts and sliders follow further down — plus ultra-long vision spotlights live in the row below this one.
+                  Near-term commits roll up into twelve-month outcomes, then into
+                  multi-quarter posture. Charts and sliders follow further down - plus ultra-long vision spotlights live in the row below this one.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
+          <div className="grid gap-4 lg:grid-cols-3 lg:gap-5">
             <GoalsHorizonSpotlight
               horizon="short_term"
               title="Near-term wins"
@@ -611,9 +620,20 @@ export function GoalsPageClient() {
               onOpenGoal={setSelectedId}
             />
             <GoalsHorizonSpotlight
+              horizon="one_year"
+              title="One-year outcomes"
+              tagline="Twelve-month arcs: revenue targets, habit stacks, key milestones by year-end."
+              goals={oneYear}
+              accent="year1"
+              Icon={CalendarRange}
+              longTitleById={longTitleById}
+              visionTitleById={visionTitleById}
+              onOpenGoal={setSelectedId}
+            />
+            <GoalsHorizonSpotlight
               horizon="long_term"
               title="Strategic trajectory"
-              tagline="Multi-quarter posture: leverage, revenue mix, craft, resilience."
+              tagline="Multi-quarter posture beyond a single year: leverage, craft, resilience."
               goals={longTerm}
               accent="long"
               Icon={Compass}
@@ -637,7 +657,7 @@ export function GoalsPageClient() {
                 5-, 10-, and 20-year vision pillars
               </h2>
               <p className="text-muted-foreground mt-1 max-w-2xl text-[13px] leading-relaxed">
-                Direction-level arcs beyond multi-quarter runway. Strategies can optionally link upward into any of these vistas — visions themselves stay flat (no chaining).
+                Direction-level arcs beyond multi-quarter runway. Strategies can optionally link upward into any of these vistas - visions themselves stay flat (no chaining).
               </p>
             </div>
           </div>
@@ -665,7 +685,7 @@ export function GoalsPageClient() {
             <GoalsHorizonSpotlight
               horizon="vision_20"
               title="Generational imprint"
-              tagline="Identity-level arcs — what you refuse to postpone across life eras."
+              tagline="Identity-level arcs - what you refuse to postpone across life eras."
               goals={vision20}
               accent="vision20"
               Icon={Sparkles}
@@ -678,7 +698,7 @@ export function GoalsPageClient() {
         <GoalsCharts goals={goals} />
 
         <div className="space-y-12">
-          <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
+          <div className="grid gap-10 lg:grid-cols-3 lg:gap-8">
             <GoalsColumn
               horizon="short_term"
               title="Short-term outcomes"
@@ -691,9 +711,21 @@ export function GoalsPageClient() {
               }
             />
             <GoalsColumn
+              horizon="one_year"
+              title="One-year board"
+              hint="Twelve-month wins you revisit monthly: revenue, health, relationships, craft."
+              goals={oneYear}
+              longTitleById={longTitleById}
+              visionTitleById={visionTitleById}
+              onOpenGoal={setSelectedId}
+              onProgressChange={(id, value) =>
+                updateGoal(id, { progress: value })
+              }
+            />
+            <GoalsColumn
               horizon="long_term"
               title="Strategic runway"
-              hint="Annual / multi-quarter posture: leverage, revenue mix, craft mastery, durability."
+              hint="Multi-quarter posture beyond one year: leverage, revenue mix, durability."
               goals={longTerm}
               longTitleById={longTitleById}
               visionTitleById={visionTitleById}
@@ -712,7 +744,7 @@ export function GoalsPageClient() {
               Five, ten & twenty-year vision columns
             </h3>
             <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-              Larger arcs than strategy — revisit quarterly at most; keep wording uncomfortably vivid.
+              Larger arcs than strategy - revisit quarterly at most; keep wording uncomfortably vivid.
             </p>
           </div>
 
@@ -742,7 +774,7 @@ export function GoalsPageClient() {
             <GoalsColumn
               horizon="vision_20"
               title="Vision · twenty years"
-              hint="Generational imprint — rarely edited, powerfully remembered."
+              hint="Generational imprint - rarely edited, powerfully remembered."
               goals={vision20}
               longTitleById={longTitleById}
               onOpenGoal={setSelectedId}

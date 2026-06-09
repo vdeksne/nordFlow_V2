@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Bolt,
+  CalendarRange,
   CheckCircle2,
   Compass,
   Crosshair,
@@ -25,6 +26,7 @@ import {
   goalHorizonBadge,
   goalHorizonRibbonClass,
   needsStrategicParent,
+  isShortTermRollupParent,
   supportsOptionalVisionParent,
 } from "@/lib/crm/goal-horizons";
 import { goalIsReachedArchive } from "@/lib/crm/goal-archive";
@@ -41,9 +43,14 @@ function areaShort(area: GoalArea | null): string {
 const FILTER_OPTIONS: { id: "all" | GoalHorizon; label: string }[] = [
   { id: "all", label: "All wins" },
   { id: "short_term", label: "Near-term" },
+  { id: "one_year", label: "One-year" },
   { id: "long_term", label: "Strategic" },
-  ...GOAL_HORIZON_FORM_OPTIONS.filter((o) => o.value !== "short_term" &&
-    o.value !== "long_term").map((o) => ({
+  ...GOAL_HORIZON_FORM_OPTIONS.filter(
+    (o) =>
+      o.value !== "short_term" &&
+      o.value !== "one_year" &&
+      o.value !== "long_term",
+  ).map((o) => ({
     id: o.value,
     label: o.label.replace(/^Vision · /, "").replace(/ years?$/, "-yr"),
   })),
@@ -53,6 +60,8 @@ function archiveCardTopAccentClass(h: GoalHorizon): string {
   switch (h) {
     case "short_term":
       return "via-amber-400/50";
+    case "one_year":
+      return "via-sky-400/55";
     case "long_term":
       return "via-violet-400/50";
     case "vision_5":
@@ -173,7 +182,7 @@ export function GoalsArchiveClient() {
     () =>
       Object.fromEntries(
         goals
-          .filter((g) => g.horizon === "long_term")
+          .filter((g) => isShortTermRollupParent(g.horizon))
           .map((g) => [g.id, g.title] as const),
       ),
     [goals],
@@ -210,6 +219,7 @@ export function GoalsArchiveClient() {
     return {
       all: r.length,
       short_term: r.filter((g) => g.horizon === "short_term").length,
+      one_year: r.filter((g) => g.horizon === "one_year").length,
       long_term: r.filter((g) => g.horizon === "long_term").length,
       vision_5: r.filter((g) => g.horizon === "vision_5").length,
       vision_10: r.filter((g) => g.horizon === "vision_10").length,
@@ -226,7 +236,7 @@ export function GoalsArchiveClient() {
   return (
     <CrmPage
       title="Goals archive"
-      subtitle="Every outcome that hit 100% — your wins vault. Open a card to revisit or tweak details."
+      subtitle="Every outcome that hit 100% - your wins vault. Open a card to revisit or tweak details."
     >
       <div className="dashboard-focus space-y-8 sm:space-y-10">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -288,6 +298,13 @@ export function GoalsArchiveClient() {
                   <span className="flex items-center gap-1.5">
                     <Bolt className="text-amber-400/90 size-3.5" aria-hidden />
                     {counts.short_term} near-term
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <CalendarRange
+                      className="text-sky-300/90 size-3.5"
+                      aria-hidden
+                    />
+                    {counts.one_year} one-year
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Compass

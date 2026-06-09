@@ -69,7 +69,7 @@ function priorityLabel(priority: TaskPriority) {
   return "Easy";
 }
 
-const TIMELINE_BLOCK_EST_HEIGHT_PX = 52;
+const TIMELINE_BLOCK_EST_HEIGHT_PX = 76;
 const TIMELINE_BLOCK_MIN_GAP_PX = 4;
 /** Snap reschedule targets to multiples of N minutes inside the timeline. */
 const SCHEDULE_DRAG_SNAP_MINUTES = 10;
@@ -101,7 +101,7 @@ function dueIsoFromTimelineCenterAndHeight(
   let hour = Math.floor(mins / 60);
   let minute = mins % 60;
   const d = new Date(baseDueIso);
-  /** Bottom of grid maps to “24:00”; JS Date rolls hour 24 to next calendar day — clamp to last snapped slot today. */
+  /** Bottom of grid maps to “24:00”; JS Date rolls hour 24 to next calendar day - clamp to last snapped slot today. */
   if (hour >= 24) {
     hour = 23;
     minute = Math.floor(59 / step) * step;
@@ -127,7 +127,7 @@ function tentativeTimeLabel(
   slotInnerHeightPx: number,
   baseDueIso: string,
 ): string {
-  if (slotInnerHeightPx <= 0) return "—";
+  if (slotInnerHeightPx <= 0) return "-";
   const ts = dueIsoFromTimelineCenterAndHeight(
     centerYInsideSlot,
     slotInnerHeightPx,
@@ -142,7 +142,7 @@ function tentativeWindowPreview(
   slotInnerHeightPx: number,
   task: Task,
 ): string {
-  if (slotInnerHeightPx <= 0 || blockHeightPx <= 0) return "—";
+  if (slotInnerHeightPx <= 0 || blockHeightPx <= 0) return "-";
   const rawFrom = task.scheduledFromAt?.trim();
   /** From–To: map top edge → window start time; single instant: center of pill → due. */
   if (rawFrom) {
@@ -193,7 +193,7 @@ function getTimelineSlotInnerBox(el: HTMLElement | null): {
   const cs = window.getComputedStyle(el);
   const pt = Number.parseFloat(cs.paddingTop || "0");
   const pb = Number.parseFloat(cs.paddingBottom || "0");
-  /** Prefer layout box height — `clientHeight` can read 0 briefly in nested flex layouts. */
+  /** Prefer layout box height - `clientHeight` can read 0 briefly in nested flex layouts. */
   const innerHeight = Math.max(0, rect.height - pt - pb);
   return {
     innerTopViewport: rect.top + pt,
@@ -337,6 +337,13 @@ function taskTimelineAnchorIso(
   return f ?? task.dueAt;
 }
 
+/** True when the task has a From–To window worth stretching on the grid. */
+function isTimelineWindowTask(task: Pick<Task, "dueAt" | "scheduledFromAt">): boolean {
+  const raw = task.scheduledFromAt?.trim();
+  if (!raw) return false;
+  return new Date(task.dueAt).getTime() - new Date(raw).getTime() > 0;
+}
+
 type TimelinePlacement = { task: Task; topPx: number; heightPx: number };
 
 function placeTasksOnTimeline(
@@ -357,6 +364,10 @@ function placeTasksOnTimeline(
       gridHeightPx,
       anchorMs,
     );
+
+    if (!isTimelineWindowTask(task)) {
+      heightPx = TIMELINE_BLOCK_EST_HEIGHT_PX;
+    }
 
     topPx = Math.max(
       TIMELINE_BLOCK_MIN_GAP_PX,
@@ -487,6 +498,7 @@ function TimetableTaskBlock({
   onGripPointerDown,
   dragging,
   scheduledTimeDisplay,
+  fillHeight = false,
 }: {
   task: Task;
   onToggle: (id: string) => void;
@@ -496,6 +508,8 @@ function TimetableTaskBlock({
   dragging?: boolean;
   /** During drag overlay: shown instead of parsing task.dueAt for the badge. */
   scheduledTimeDisplay?: string;
+  /** Long From–To blocks: fill slot height and scroll overflow inside. */
+  fillHeight?: boolean;
 }) {
   const { deals } = useDeals();
   const { companies } = useCompanies();
@@ -532,7 +546,8 @@ function TimetableTaskBlock({
         }
       }}
       className={cn(
-        "relative flex h-full min-h-0 cursor-pointer gap-1.5 rounded-none border border-white/[0.08] bg-[color-mix(in_oklab,var(--card)_90%,transparent)] p-2.5 text-left backdrop-blur-sm transition-[border-color,box-shadow,opacity] hover:border-white/[0.14]",
+        "relative flex w-full cursor-pointer gap-1.5 rounded-none border border-white/[0.08] bg-[color-mix(in_oklab,var(--card)_90%,transparent)] p-2 text-left backdrop-blur-sm transition-[border-color,box-shadow,opacity] hover:border-white/[0.14]",
+        fillHeight ? "h-full min-h-0" : "h-auto min-h-[4.5rem]",
         task.done && "opacity-[0.65]",
         overdue && !task.done && "border-rose-400/30",
         dragging &&
@@ -550,7 +565,7 @@ function TimetableTaskBlock({
           type="button"
           aria-label="Drag up or down to reschedule this task"
           className={cn(
-            "relative z-[1] flex h-11 w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-none border border-transparent text-muted-foreground transition-colors hover:border-white/[0.1] hover:text-foreground active:cursor-grabbing",
+            "relative z-[1] flex h-9 w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-none border border-transparent text-muted-foreground transition-colors hover:border-white/[0.1] hover:text-foreground active:cursor-grabbing",
           )}
           onPointerDown={(e) => {
             e.stopPropagation();
@@ -569,7 +584,7 @@ function TimetableTaskBlock({
           task.done
             ? "Mark as open"
             : task.repeatDaily
-              ? "Finish today — reschedule for tomorrow at the same time"
+              ? "Finish today - reschedule for tomorrow at the same time"
               : "Mark as done"
         }
         onClick={(e) => {
@@ -577,7 +592,7 @@ function TimetableTaskBlock({
           onToggle(task.id);
         }}
         className={cn(
-          "relative z-[1] mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-none border transition-colors",
+          "relative z-[1] flex size-7 shrink-0 items-center justify-center rounded-none border transition-colors",
           task.done
             ? "border-primary/45 bg-primary/[0.15] text-primary"
             : "border-white/[0.12] bg-white/[0.04] hover:border-primary/35",
@@ -591,7 +606,12 @@ function TimetableTaskBlock({
           aria-hidden
         />
       </button>
-      <div className="relative z-[1] flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden">
+      <div
+        className={cn(
+          "relative z-[1] flex min-w-0 flex-1 flex-col gap-0.5 py-0.5",
+          fillHeight && "min-h-0 overflow-y-auto overflow-x-hidden",
+        )}
+      >
         <div className="flex flex-wrap shrink-0 items-center gap-1.5">
           <span className="text-muted-foreground text-[9px] font-semibold tracking-[0.14em] uppercase">
             {priorityLabel(task.priority)}
@@ -613,15 +633,18 @@ function TimetableTaskBlock({
         </div>
         <p
           className={cn(
-            "mt-0.5 shrink-0 text-[12px] leading-snug font-semibold tracking-tight",
+            "text-[12px] leading-snug font-semibold tracking-tight",
+            fillHeight ? "line-clamp-3" : "line-clamp-2",
             task.done && "text-muted-foreground line-through decoration-white/25",
           )}
         >
           {task.title}
         </p>
-        <p className="text-muted-foreground mt-0.5 shrink-0 truncate text-[10px] tracking-wide uppercase">
-          {relatedLine}
-        </p>
+        {fillHeight ? (
+          <p className="text-muted-foreground truncate text-[10px] tracking-wide uppercase">
+            {relatedLine}
+          </p>
+        ) : null}
       </div>
     </div>
   );
@@ -739,7 +762,7 @@ export function TodayPageClient() {
   const timelinePadRef = useRef<HTMLDivElement | null>(null);
   const quickTitleInputRef = useRef<HTMLInputElement>(null);
   const timelineDragSessionRef = useRef<TimelineDragSession | null>(null);
-  /** During empty-timeline drag range selection — suppress dashed hover preview. */
+  /** During empty-timeline drag range selection - suppress dashed hover preview. */
   const timelineGridRangeSelectingRef = useRef(false);
   /** Active drag-from–Catch up chip onto timeline (blocks stray timeline hover painting). */
   const catchUpScheduleDragRef = useRef<{ taskId: string } | null>(null);
@@ -995,7 +1018,7 @@ export function TodayPageClient() {
         captureTarget.setPointerCapture(pointerId);
         captureOk = true;
       } catch {
-        /* Continue without capture — pointerup still fires on window for mouse/touch. */
+        /* Continue without capture - pointerup still fires on window for mouse/touch. */
       }
 
       const onMove = (ev: PointerEvent) => {
@@ -1519,7 +1542,7 @@ export function TodayPageClient() {
                     type="button"
                     aria-label={
                       timelineDrag === null
-                        ? "Timeline: drag empty space for a From to To block, or click for a single time — snaps to Quick capture"
+                        ? "Timeline: drag empty space for a From to To block, or click for a single time - snaps to Quick capture"
                         : undefined
                     }
                     tabIndex={timelineDrag !== null ? -1 : 0}
@@ -1546,6 +1569,7 @@ export function TodayPageClient() {
                         isDraggingSlot && timelineDrag
                           ? timelineDrag.heightPx
                           : heightPx;
+                      const windowBlock = isTimelineWindowTask(task);
                       return (
                         <div
                           key={task.id}
@@ -1554,7 +1578,11 @@ export function TodayPageClient() {
                             "pointer-events-auto absolute right-2 left-2",
                             isDraggingSlot && "z-[50]",
                           )}
-                          style={{ top: displayTop, height: displayHeightPx }}
+                          style={
+                            windowBlock
+                              ? { top: displayTop, height: displayHeightPx }
+                              : { top: displayTop, minHeight: displayHeightPx }
+                          }
                         >
                           <TimetableTaskBlock
                             task={task}
@@ -1569,6 +1597,7 @@ export function TodayPageClient() {
                               )
                             }
                             dragging={isDraggingSlot}
+                            fillHeight={windowBlock}
                             scheduledTimeDisplay={
                               isDraggingSlot
                                 ? timelineDrag.previewLabel

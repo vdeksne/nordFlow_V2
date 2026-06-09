@@ -1,4 +1,4 @@
-/** Goal domain taxonomy — stored as snake_case in DB/API (`area` column). */
+/** Goal domain taxonomy - stored as snake_case in DB/API (`area` column). */
 
 export type GoalArea =
   | "self"
@@ -39,7 +39,7 @@ export function isGoalAreaField(
   return typeof v === "string" && isGoalAreaString(v);
 }
 
-/** Short badge label — domain name */
+/** Short badge label - domain name */
 export function goalAreaDomain(area: GoalArea): string {
   return GOAL_AREA_OPTIONS.find((o) => o.value === area)?.domain ?? area;
 }
@@ -47,10 +47,10 @@ export function goalAreaDomain(area: GoalArea): string {
 /** Single-line label for selects */
 export function goalAreaOptionLabel(area: GoalArea): string {
   const o = GOAL_AREA_OPTIONS.find((x) => x.value === area);
-  return o ? `${o.domain} — ${o.function}` : area;
+  return o ? `${o.domain} - ${o.function}` : area;
 }
 
-/** Badge / selectable chip styling — matches CRM goals surfaces */
+/** Badge / selectable chip styling - matches CRM goals surfaces */
 export function goalAreaPillClass(area: GoalArea | null): string {
   switch (area) {
     case "self":

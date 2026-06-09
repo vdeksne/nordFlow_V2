@@ -41,6 +41,7 @@ const CHART_COLORS = [
 
 const HORIZON_BAR_ORDER: { horizon: GoalHorizon; name: string }[] = [
   { horizon: "short_term", name: "Short-term" },
+  { horizon: "one_year", name: "One-year" },
   { horizon: "long_term", name: "Strategic" },
   { horizon: "vision_5", name: "5-yr vision" },
   { horizon: "vision_10", name: "10-yr vision" },
@@ -51,14 +52,16 @@ function barHueForHorizon(h: GoalHorizon): string {
   switch (h) {
     case "short_term":
       return CHART_COLORS[0];
+    case "one_year":
+      return CHART_COLORS[1];
     case "long_term":
       return CHART_COLORS[2];
     case "vision_5":
-      return CHART_COLORS[1];
-    case "vision_10":
       return CHART_COLORS[3];
-    case "vision_20":
+    case "vision_10":
       return CHART_COLORS[4];
+    case "vision_20":
+      return CHART_COLORS[0];
     default: {
       const _never: never = h;
       return _never;
@@ -164,7 +167,7 @@ export function GoalsCharts({ goals }: GoalsChartsProps) {
         aria-label="Goal charts"
       >
         <p className="text-muted-foreground text-sm">
-          Charts light up once you have goals across any horizon — execution,
+          Charts light up once you have goals across any horizon - execution,
           strategy, or 5–20 year vision arcs.
         </p>
       </section>
@@ -201,7 +204,7 @@ export function GoalsCharts({ goals }: GoalsChartsProps) {
               Domain balance
             </CardTitle>
             <CardDescription>
-              Mean progress on active goals across life domains — self, work,
+              Mean progress on active goals across life domains - self, work,
               money, relationships, meaning, and body.
             </CardDescription>
           </CardHeader>
@@ -399,7 +402,7 @@ export function GoalsCharts({ goals }: GoalsChartsProps) {
               Horizon pulse
             </CardTitle>
             <CardDescription>
-              Mean progress on active goals across every horizon lane —
+              Mean progress on active goals across every horizon lane -
               execution through strategic and 5–20 year vision rows. Tooltip
               shows headcount per lane.
             </CardDescription>

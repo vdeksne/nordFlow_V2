@@ -171,7 +171,7 @@ export function TaskDetailSheet({
                 {title.trim() || "Task details"}
               </SheetTitle>
               <SheetDescription>
-                Full view — link to Goals, CRM records, or inbox. Toggle
+                Full view - link to Goals, CRM records, or inbox. Toggle
                 completion or delete from your queue.
               </SheetDescription>
             </SheetHeader>

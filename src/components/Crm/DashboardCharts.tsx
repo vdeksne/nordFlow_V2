@@ -466,7 +466,7 @@ export function DashboardCharts({
               Glance
             </span>
             {" · "}
-            Breadth of security and upside—still life first, spreadsheets second.
+            Breadth of security and upside-still life first, spreadsheets second.
           </p>
         </div>
       ) : (
@@ -480,7 +480,7 @@ export function DashboardCharts({
             </h2>
             <p className="text-muted-foreground max-w-3xl text-sm leading-relaxed">
               Mix of booked work, repeating income, probability-weighted pipeline,
-              and new conversations—grounded signals while you steer toward bigger
+              and new conversations-grounded signals while you steer toward bigger
               goals.
             </p>
           </div>
@@ -495,7 +495,7 @@ export function DashboardCharts({
             </CardTitle>
             <CardDescription>
               Stretch imagines fuller capacity; runway stays closer to weighted
-              reality—income serves the life you&apos;re designing, not the other way
+              reality-income serves the life you&apos;re designing, not the other way
               around.
             </CardDescription>
           </CardHeader>
@@ -585,7 +585,7 @@ export function DashboardCharts({
               Where value lives today
             </CardTitle>
             <CardDescription>
-              Locked wins, retainers, pipeline, curious leads—nothing moralized,
+              Locked wins, retainers, pipeline, curious leads-nothing moralized,
               just composition.
             </CardDescription>
           </CardHeader>
@@ -641,7 +641,7 @@ export function DashboardCharts({
               </ul>
             ) : (
               <p className="text-muted-foreground mt-3 px-2 text-center text-xs leading-relaxed">
-                As you log wins and relationships, this picture fills itself—money
+                As you log wins and relationships, this picture fills itself-money
                 is one layer of momentum, not the whole scoreboard.
               </p>
             )}
@@ -962,7 +962,7 @@ export function DashboardCharts({
               </CardTitle>
               <CardDescription>
                 Summary signals from completions, closes, and real
-                conversations—you are more than these numbers.
+                conversations-you are more than these numbers.
               </CardDescription>
             </div>
             <p className="text-primary text-[10px] font-semibold tracking-[0.2em] uppercase">
@@ -974,19 +974,19 @@ export function DashboardCharts({
               <GaugeRing
                 value={executionScore}
                 label="Follow-through"
-                hint="Checked-off vs total reminders—steady beats heroic sprints."
+                hint="Checked-off vs total reminders-steady beats heroic sprints."
                 icon={Zap}
               />
               <GaugeRing
                 value={winMixScore}
                 label="Earned closures"
-                hint="Closed work as share of portfolio—grounds confidence."
+                hint="Closed work as share of portfolio-grounds confidence."
                 icon={Flame}
               />
               <GaugeRing
                 value={funnelHeatScore}
                 label="Warm conversations"
-                hint="Qualified interest among leads—it is okay to prune the rest."
+                hint="Qualified interest among leads-it is okay to prune the rest."
                 icon={Orbit}
               />
             </div>

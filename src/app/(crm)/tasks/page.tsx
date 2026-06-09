@@ -5,7 +5,7 @@ export default function TasksPage() {
   return (
     <CrmPage
       title="Tasks"
-      subtitle="Quiet list for commitments that actually matter—to your goals, relationships, craft, or income. Enough structure to execute; enough space for a life."
+      subtitle="Quiet list for commitments that actually matter-to your goals, relationships, craft, or income. Enough structure to execute; enough space for a life."
     >
       <TasksBoard />
     </CrmPage>

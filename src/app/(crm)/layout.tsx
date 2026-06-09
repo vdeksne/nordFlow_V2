@@ -7,6 +7,7 @@ import { DealsProvider } from "@/components/Crm/DealsContext";
 import { LeadsProvider } from "@/components/Crm/LeadsContext";
 import { MobileNav } from "@/components/Crm/MobileNav";
 import { GoalsProvider } from "@/components/Crm/GoalsContext";
+import { HealthProvider } from "@/components/Crm/HealthContext";
 import { ProfileProvider } from "@/components/Crm/ProfileContext";
 import { ProjectsProvider } from "@/components/Crm/ProjectsContext";
 import { TasksProvider } from "@/components/Crm/TasksContext";
@@ -26,7 +27,8 @@ export default function CrmLayout({
                 <TasksProvider>
                   <ProjectsProvider>
                     <GoalsProvider>
-                      <div className="flex min-h-screen">
+                      <HealthProvider>
+                        <div className="flex min-h-screen">
                         <div className="hidden w-[260px] shrink-0 lg:block">
                           <div className="border-sidebar-border fixed inset-y-0 left-0 w-[260px] border-r border-white/[0.04]">
                             <AppSidebar />
@@ -38,6 +40,7 @@ export default function CrmLayout({
                         </div>
                       </div>
                       <AiAssistantDock />
+                      </HealthProvider>
                     </GoalsProvider>
                   </ProjectsProvider>
                 </TasksProvider>

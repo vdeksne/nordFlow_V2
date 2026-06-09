@@ -14,6 +14,7 @@ import {
 import { migrateLegacyGoalArea } from "@/lib/crm/goal-areas";
 import {
   isGoalHorizon,
+  isShortTermRollupParent,
   needsStrategicParent,
   supportsOptionalVisionParent,
 } from "@/lib/crm/goal-horizons";
@@ -65,10 +66,10 @@ function coerceStoredGoalHorizon(h: unknown): GoalHorizon {
   return isGoalHorizon(h) ? h : "long_term";
 }
 
-/** Older caches omit longTermGoalId — attach shorts to the first strategic goal when possible */
+/** Older caches omit longTermGoalId - attach shorts to the first strategic goal when possible */
 function coerceStoredGoals(parsed: Goal[]): Goal[] {
   const longParents = parsed
-    .filter((g) => g?.horizon === "long_term")
+    .filter((g) => isShortTermRollupParent(g.horizon))
     .sort((a, b) => {
       if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
       return b.updatedAt.localeCompare(a.updatedAt);
@@ -126,7 +127,7 @@ export type NewGoalInput = {
   horizon: GoalHorizon;
   /** Required when horizon is short_term (must be an existing long-term goal id). */
   longTermGoalId?: string | null;
-  /** Optional when horizon is long_term — any 5/10/20y vision goal. */
+  /** Optional when horizon is long_term - any 5/10/20y vision goal. */
   visionParentGoalId?: string | null;
   title: string;
   metric: string | null;
@@ -158,8 +159,8 @@ export function mergeGoalPatch(
   patch: GoalUpdateInput,
 ): Goal[] {
   const today = new Date().toISOString().slice(0, 10);
-  const sortedLongParents = [...prevList]
-    .filter((x) => x.horizon === "long_term")
+  const sortedRollupParents = [...prevList]
+    .filter((x) => isShortTermRollupParent(x.horizon))
     .sort((a, b) => {
       if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
       return b.updatedAt.localeCompare(a.updatedAt);
@@ -179,13 +180,13 @@ export function mergeGoalPatch(
       if (patch.horizon === "short_term") {
         next.longTermGoalId =
           patch.longTermGoalId ??
-          sortedLongParents[0]?.id ??
+          sortedRollupParents[0]?.id ??
           g.longTermGoalId ??
           null;
         next.visionParentGoalId = null;
       } else {
         next.longTermGoalId = null;
-        if (patch.horizon === "long_term") {
+        if (supportsOptionalVisionParent(patch.horizon)) {
           next.visionParentGoalId =
             patch.visionParentGoalId !== undefined
               ? patch.visionParentGoalId
@@ -202,7 +203,7 @@ export function mergeGoalPatch(
 
     if (
       patch.visionParentGoalId !== undefined &&
-      next.horizon === "long_term"
+      supportsOptionalVisionParent(next.horizon)
     ) {
       next.visionParentGoalId = patch.visionParentGoalId;
     }
@@ -225,7 +226,9 @@ export function mergeGoalPatch(
     if (patch.sortOrder !== undefined) next.sortOrder = patch.sortOrder;
 
     if (next.horizon !== "short_term") next.longTermGoalId = null;
-    if (next.horizon !== "long_term") next.visionParentGoalId = null;
+    if (!supportsOptionalVisionParent(next.horizon)) {
+      next.visionParentGoalId = null;
+    }
 
     return next;
   });
@@ -253,7 +256,7 @@ type GoalsContextValue = {
   neonBacked: boolean;
   hydrated: boolean;
   /**
-   * Signed in but GET /api/goals did not succeed — edits use browser-only storage
+   * Signed in but GET /api/goals did not succeed - edits use browser-only storage
    * until load succeeds (see `goalsLoadError` and `retryGoalsFromApi`).
    */
   goalsApiUnreachable: boolean;
@@ -453,7 +456,14 @@ export function GoalsProvider({ children }: { children: ReactNode }) {
         } catch {
           /* non-JSON body */
         }
-        return { ok: false, error: message };
+        return {
+          ok: false,
+          error:
+            message ??
+            (res.status === 409
+              ? "Could not save goal (conflict). Refresh and try again."
+              : `Could not save goal (HTTP ${res.status}).`),
+        };
       }
 
       const data = (await res.json()) as { goal?: Goal };
@@ -490,11 +500,12 @@ export function GoalsProvider({ children }: { children: ReactNode }) {
     if (!merged) return;
 
     void (async () => {
+      const snapshot = merged!;
       const res = await fetch(`/api/goals/${id}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(goalSyncPayload(merged!)),
+        body: JSON.stringify(goalSyncPayload(snapshot)),
       });
 
       if (!res.ok) {

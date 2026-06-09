@@ -38,6 +38,7 @@ import {
   goalHorizonTriggerRingClass,
   isVisionHorizon,
   needsStrategicParent,
+  isShortTermRollupParent,
   supportsOptionalVisionParent,
 } from "@/lib/crm/goal-horizons";
 import type { GoalHorizon, GoalStatus } from "@/lib/crm/types";
@@ -158,7 +159,7 @@ export function AddGoalSheet({ horizon }: { horizon: GoalHorizon }) {
   const longParents = useMemo(
     () =>
       [...goals]
-        .filter((g) => g.horizon === "long_term")
+        .filter((g) => isShortTermRollupParent(g.horizon))
         .sort((a, b) => {
           if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
           return b.updatedAt.localeCompare(a.updatedAt);
@@ -446,7 +447,7 @@ export function AddGoalSheet({ horizon }: { horizon: GoalHorizon }) {
                     </ul>
                     {longParents.length === 1 ? (
                       <p className="text-muted-foreground text-[11px] leading-snug">
-                        Only one north star exists — it&apos;s selected for you.
+                        Only one north star exists - it&apos;s selected for you.
                       </p>
                     ) : null}
                   </fieldset>
@@ -458,7 +459,7 @@ export function AddGoalSheet({ horizon }: { horizon: GoalHorizon }) {
               <FormSection
                 step={showStrategicRollup ? undefined : 1}
                 title="Anchor under vision (optional)"
-                description="Tie this strategic runway to any 5-, 10-, or 20-year vision — skip if unsure."
+                description="Tie this strategic runway to any 5-, 10-, or 20-year vision - skip if unsure."
               >
                 <fieldset className="space-y-2">
                   <legend className="sr-only">
@@ -477,7 +478,7 @@ export function AddGoalSheet({ horizon }: { horizon: GoalHorizon }) {
                     onChange={(e) => setVisionParentGoalId(e.target.value)}
                     className={controlClass}
                   >
-                    <option value="">None — standalone strategic</option>
+                    <option value="">None - standalone strategic</option>
                     {visionParents.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.title}
@@ -495,7 +496,7 @@ export function AddGoalSheet({ horizon }: { horizon: GoalHorizon }) {
             <FormSection
               step={stepOutcome}
               title="Name the outcome"
-              description="Title first — metrics sharpen the picture."
+              description="Title first - metrics sharpen the picture."
             >
               <div className="space-y-2">
                 <FieldLabel htmlFor={field("title")}>Title</FieldLabel>
@@ -509,7 +510,7 @@ export function AddGoalSheet({ horizon }: { horizon: GoalHorizon }) {
                     setTitle(e.target.value);
                     setError(null);
                   }}
-                  placeholder="What ships — in plain language"
+                  placeholder="What ships - in plain language"
                   autoComplete="off"
                   className={cn(
                     controlClass,
@@ -527,7 +528,7 @@ export function AddGoalSheet({ horizon }: { horizon: GoalHorizon }) {
                   value={metric}
                   disabled={saving}
                   onChange={(e) => setMetric(e.target.value)}
-                  placeholder="One observable signal — what changed when this is done?"
+                  placeholder="One observable signal - what changed when this is done?"
                   rows={3}
                   className={textareaClass}
                 />
@@ -597,7 +598,7 @@ export function AddGoalSheet({ horizon }: { horizon: GoalHorizon }) {
 
             <FormSection
               title="Labels"
-              description="Domain and lifecycle — tweak anytime."
+              description="Domain and lifecycle - tweak anytime."
             >
               <div className="space-y-3">
                 <FieldLabel optional>Life domain</FieldLabel>

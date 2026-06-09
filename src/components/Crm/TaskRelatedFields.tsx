@@ -22,14 +22,16 @@ function goalHorizonRank(h: GoalHorizon): number {
   switch (h) {
     case "short_term":
       return 0;
-    case "long_term":
+    case "one_year":
       return 1;
-    case "vision_5":
+    case "long_term":
       return 2;
-    case "vision_10":
+    case "vision_5":
       return 3;
-    case "vision_20":
+    case "vision_10":
       return 4;
+    case "vision_20":
+      return 5;
     default: {
       const _n: never = h;
       return _n;
@@ -101,7 +103,7 @@ export function TaskRelatedFields({
             <>
               <select className={cn(selectClass)} disabled value="">
                 <option value="">
-                  No goals yet — create some on the Goals page
+                  No goals yet - create some on the Goals page
                 </option>
               </select>
               <p className="text-muted-foreground text-[11px] leading-relaxed">
@@ -126,7 +128,7 @@ export function TaskRelatedFields({
                 ))}
               </select>
               <p className="text-muted-foreground text-[11px] leading-relaxed">
-                Executes toward that goal — horizons come from the Goals board.
+                Executes toward that goal - horizons come from the Goals board.
               </p>
             </>
           )}

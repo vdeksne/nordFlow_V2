@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-/** Overrides default centered modal shell — fullscreen scroll area, centered panel */
+/** Overrides default centered modal shell - fullscreen scroll area, centered panel */
 export const goalEditorDialogPopupClassName = cn(
   "fixed inset-0 z-50 flex max-h-none min-h-[100dvh] w-full max-w-none -translate-x-0 -translate-y-0 flex-col gap-0 overflow-y-auto overscroll-contain border-0 bg-transparent px-4 py-8 shadow-none ring-0 sm:px-6 sm:py-10 md:py-14",
   "data-starting-style:scale-100 data-ending-style:scale-100",

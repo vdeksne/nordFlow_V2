@@ -1,19 +1,19 @@
 # NordFlow CRM · StartSchool hackathon
 
-NordFlow is a **demo-first CRM** (`npm`: **`crm-hackatons@0.1.0`**, MIT, private)—dark, mobile-aware UI for portfolio, leads, pipeline, tasks, `/today`, goals, dashboard KPIs, and a **copilot preview** (mock assistant, ⌘K / Ctrl+K). **CRM data** (customers, leads, deals, tasks) persists in **`localStorage`** unless you extend it; **`/dashboard`** is the primary entry (root redirects).
+NordFlow is a **demo-first CRM** (`npm`: **`crm-hackatons@0.1.0`**, MIT, private)-dark, mobile-aware UI for portfolio, leads, pipeline, tasks, `/today`, goals, dashboard KPIs, and a **copilot preview** (mock assistant, ⌘K / Ctrl+K). **CRM data** (customers, leads, deals, tasks) persists in **`localStorage`** unless you extend it; **`/dashboard`** is the primary entry (root redirects).
 
 ### Technical orientation
 
 | Axis | Choices (see `package.json` for semver ranges) |
 |------|-----------------------------------------------|
-| **Framework** | [Next.js](https://nextjs.org) **16.2.6** — App Router, `next dev` / `next build` use **Turbopack**. |
+| **Framework** | [Next.js](https://nextjs.org) **16.2.6** - App Router, `next dev` / `next build` use **Turbopack**. |
 | **UI runtime** | [React](https://react.dev) **19.2.4** + React DOM **19.2.4** |
 | **Language** | [TypeScript](https://www.typescriptlang.org) **^5**, `strict` mode (`target` ES2017, `moduleResolution: bundler`) |
 | **Styling** | [Tailwind CSS](https://tailwindcss.com) **^4**, [`@tailwindcss/postcss`](https://tailwindcss.com/docs/installation/using-postcss) **^4**, [`tw-animate-css`](https://github.com/Wombosvideo/tw-animate-css) **^1.4** |
 | **UI kit** | [`@base-ui/react`](https://base-ui.com) **^1.4**, [`class-variance-authority`](https://cva.style) **^0.7**, [`tailwind-merge`](https://github.com/dcastil/tailwind-merge) **^3**, [`clsx`](https://github.com/lukeed/clsx) **^2**, [`shadcn`](https://ui.shadcn.com/) CLI **^4.7**, [Lucide](https://lucide.dev) (`lucide-react` **^1.14**) |
 | **Charts / CSV** | [Recharts](https://recharts.org) **^3.6** · [Papa Parse](https://www.papaparse.com) **^5.5** |
 | **Auth path (optional)** | [Neon serverless driver](https://neon.tech/docs/serverless/serverless-driver) **`@neondatabase/serverless` ^1.1** · [jose](https://github.com/panva/jose) **^6.2** (JWT) · [bcryptjs](https://github.com/dcodeIO/bcrypt.js) **^3** |
-| **Scaffold leftover** | [`@supabase/supabase-js`](https://supabase.com/docs/reference/javascript) **^2** — client stub only unless you plug Supabase in |
+| **Scaffold leftover** | [`@supabase/supabase-js`](https://supabase.com/docs/reference/javascript) **^2** - client stub only unless you plug Supabase in |
 | **Quality & docs** | [ESLint](https://eslint.org) **^9** + [`eslint-config-next` 16.2.6](https://nextjs.org/docs/app/api-reference/config/eslint) · [Storybook](https://storybook.js.org) **^10.3** (`@storybook/nextjs-vite`) · [Vitest](https://vitest.dev) **^4.1** + [`@vitest/browser-playwright`](https://vitest.dev/guide/browser/playwright) · [Playwright](https://playwright.dev) **^1.60** · [Vite](https://vite.dev) **^8** (Storybook / Vitest host) |
 
 **Note:** Versions above match the workspace `package.json` at authoring time (`^` and exact pins as declared there). Bump the table when you bump dependencies.

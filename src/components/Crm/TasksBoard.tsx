@@ -147,7 +147,7 @@ function TaskCard({
               task.done
                 ? "Mark as open"
                 : task.repeatDaily
-                  ? "Finish today — reschedule for tomorrow at the same time"
+                  ? "Finish today - reschedule for tomorrow at the same time"
                   : "Mark as done"
             }
             onClick={(e) => {
@@ -300,7 +300,7 @@ export function TasksBoard() {
     <div className="space-y-10">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-muted-foreground/90 max-w-2xl text-center text-[13px] font-medium leading-relaxed tracking-tight md:text-left">
-          Name what deserves your finite attention—not everything on your mind,
+          Name what deserves your finite attention-not everything on your mind,
           only what aligns with where you&apos;re aiming.
         </p>
         <AddTaskSheet />
@@ -326,7 +326,7 @@ export function TasksBoard() {
           <div className="mt-1 flex items-center gap-3">
             <MomentumOrbit value={stats.momentum} />
             <p className="text-muted-foreground text-[11px] leading-snug tracking-wide">
-              Done beats perfect. Closing small promises builds trust—with
+              Done beats perfect. Closing small promises builds trust-with
               yourself and everyone counting on you.
             </p>
           </div>
@@ -392,7 +392,7 @@ export function TasksBoard() {
                   Today
                 </h2>
                 <p className="text-muted-foreground mt-0.5 text-[11px] tracking-wide">
-                  What you deliberately plan to finish today—not the whole sprint.
+                  What you deliberately plan to finish today-not the whole sprint.
                 </p>
               </div>
               <span className="text-muted-foreground text-[11px] tabular-nums">
@@ -402,7 +402,7 @@ export function TasksBoard() {
             </header>
             <div className="flex flex-col gap-3">
               {todayTasks.length === 0 ? (
-                <EmptyLane label="Nothing due today—that can be intentional rest, or borrow one step from Ahead." />
+                <EmptyLane label="Nothing due today-that can be intentional rest, or borrow one step from Ahead." />
               ) : (
                 todayTasks.map((task) => (
                   <div
@@ -437,7 +437,7 @@ export function TasksBoard() {
             </header>
             <div className="flex flex-col gap-3">
               {aheadTasks.length === 0 ? (
-                <EmptyLane label="Ahead is calm—capture the next tangible step whenever you&apos;re ready." />
+                <EmptyLane label="Ahead is calm-capture the next tangible step whenever you&apos;re ready." />
               ) : (
                 aheadTasks.map((task) => (
                   <div
@@ -483,7 +483,7 @@ export function TasksBoard() {
               Recently finished
             </h3>
             {doneTasks.length === 0 ? (
-              <EmptyLane label="Complete one commitment—something you genuinely care about—and it lands here." />
+              <EmptyLane label="Complete one commitment-something you genuinely care about-and it lands here." />
             ) : (
               <div className="flex flex-col gap-2.5">
                 {doneTasks.map((task) => (

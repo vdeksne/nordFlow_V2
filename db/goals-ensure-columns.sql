@@ -8,13 +8,16 @@ ALTER TABLE public.app_goals
 -- Attach shorts to each user's first long-term goal where parent is still null.
 UPDATE public.app_goals AS g
 SET long_term_goal_id = sub.parent_id
-FROM (
+  FROM (
   SELECT DISTINCT ON (user_id)
     user_id,
     id AS parent_id
   FROM public.app_goals
-  WHERE horizon = 'long_term'
-  ORDER BY user_id, sort_order ASC, updated_at DESC
+  WHERE horizon IN ('one_year', 'long_term')
+  ORDER BY user_id,
+    CASE horizon WHEN 'one_year' THEN 0 ELSE 1 END,
+    sort_order ASC,
+    updated_at DESC
 ) AS sub
 WHERE g.horizon = 'short_term'
   AND g.long_term_goal_id IS NULL
@@ -36,6 +39,28 @@ ALTER TABLE public.app_goals DROP CONSTRAINT IF EXISTS app_goals_long_term_paren
 
 ALTER TABLE public.app_goals
   ADD CONSTRAINT app_goals_long_term_parent_ck CHECK (
-    (horizon = 'long_term' AND long_term_goal_id IS NULL)
-    OR (horizon = 'short_term' AND long_term_goal_id IS NOT NULL)
+    (horizon = 'short_term' AND long_term_goal_id IS NOT NULL)
+    OR (horizon <> 'short_term' AND long_term_goal_id IS NULL)
+  );
+
+-- Keep horizon check aligned with the app (includes one_year).
+ALTER TABLE public.app_goals DROP CONSTRAINT IF EXISTS app_goals_horizon_check;
+
+ALTER TABLE public.app_goals
+  ADD CONSTRAINT app_goals_horizon_check CHECK (
+    horizon IN (
+      'short_term',
+      'one_year',
+      'long_term',
+      'vision_5',
+      'vision_10',
+      'vision_20'
+    )
+  );
+
+ALTER TABLE public.app_goals DROP CONSTRAINT IF EXISTS app_goals_vision_parent_ck;
+
+ALTER TABLE public.app_goals
+  ADD CONSTRAINT app_goals_vision_parent_ck CHECK (
+    (horizon IN ('long_term', 'one_year') OR vision_parent_goal_id IS NULL)
   );

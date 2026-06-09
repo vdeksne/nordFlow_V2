@@ -28,6 +28,7 @@ import type { Goal, GoalHorizon, GoalStatus } from "@/lib/crm/types";
 import { cn } from "@/lib/utils";
 import {
   GOAL_HORIZON_FORM_OPTIONS,
+  isShortTermRollupParent,
   isVisionHorizon,
   needsStrategicParent,
   supportsOptionalVisionParent,
@@ -92,7 +93,7 @@ export function GoalDetailSheet({
   const longParents = useMemo(
     () =>
       [...goals]
-        .filter((g) => g.horizon === "long_term")
+        .filter((g) => isShortTermRollupParent(g.horizon))
         .sort((a, b) => {
           if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
           return b.updatedAt.localeCompare(a.updatedAt);
@@ -252,7 +253,7 @@ export function GoalDetailSheet({
           <DialogHeader className="shrink-0 px-5 pt-5 pb-4 sm:px-6 sm:pt-6">
             <DialogTitle>{title.trim() || "Untitled goal"}</DialogTitle>
             <DialogDescription>
-              Fullscreen editor — adjust horizon, metrics, and progress in one
+              Fullscreen editor - adjust horizon, metrics, and progress in one
               place. Save to apply changes.
             </DialogDescription>
           </DialogHeader>
@@ -359,7 +360,7 @@ export function GoalDetailSheet({
                       "text-foreground h-11 w-full px-3 text-sm",
                     )}
                   >
-                    <option value="">None — standalone strategic goal</option>
+                    <option value="">None - standalone strategic goal</option>
                     {visionParents.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.title}

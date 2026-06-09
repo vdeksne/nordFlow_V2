@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS public.app_goals (
   CONSTRAINT app_goals_horizon_check CHECK (
     horizon IN (
       'short_term',
+      'one_year',
       'long_term',
       'vision_5',
       'vision_10',
@@ -41,7 +42,7 @@ CREATE TABLE IF NOT EXISTS public.app_goals (
     OR (horizon <> 'short_term' AND long_term_goal_id IS NULL)
   ),
   CONSTRAINT app_goals_vision_parent_ck CHECK (
-    (horizon = 'long_term' OR vision_parent_goal_id IS NULL)
+    (horizon IN ('long_term', 'one_year') OR vision_parent_goal_id IS NULL)
   )
 );
 

@@ -5,12 +5,13 @@ import { NextResponse } from "next/server";
 import { getSessionFromCookies } from "@/lib/auth/get-session";
 import { isGoalAreaField } from "@/lib/crm/goal-areas";
 import { goalFromRow, type GoalRow } from "@/lib/goals/db-row";
+import { goalsWriteErrorResponse } from "@/lib/goals/write-error";
 import {
   isLongTermGoalOwnedByUser,
   isVisionParentGoalOwnedByUser,
 } from "@/lib/goals/long-term-parent";
 import { getNeonSql } from "@/lib/neon/client";
-import { isGoalHorizon } from "@/lib/crm/goal-horizons";
+import { isGoalHorizon, supportsOptionalVisionParent } from "@/lib/crm/goal-horizons";
 import type { GoalStatus } from "@/lib/crm/types";
 
 function isStatus(v: unknown): v is GoalStatus {
@@ -37,7 +38,7 @@ export async function GET() {
     return NextResponse.json(
       {
         ok: false,
-        error: "Session missing or expired — sign in again.",
+        error: "Session missing or expired - sign in again.",
       },
       { status: 401 },
     );
@@ -63,10 +64,11 @@ export async function GET() {
     ORDER BY
       CASE horizon
         WHEN 'short_term' THEN 1
-        WHEN 'long_term' THEN 2
-        WHEN 'vision_5' THEN 3
-        WHEN 'vision_10' THEN 4
-        WHEN 'vision_20' THEN 5
+        WHEN 'one_year' THEN 2
+        WHEN 'long_term' THEN 3
+        WHEN 'vision_5' THEN 4
+        WHEN 'vision_10' THEN 5
+        WHEN 'vision_20' THEN 6
         ELSE 99
       END,
       sort_order ASC,
@@ -86,14 +88,14 @@ export async function GET() {
       lower.includes("does not exist")
     ) {
       error =
-        "Goals table missing — run db/auth-schema.sql then db/goals-schema.sql on Neon.";
+        "Goals table missing - run db/auth-schema.sql then db/goals-schema.sql on Neon.";
     } else if (
       (lower.includes("long_term_goal_id") ||
         lower.includes("vision_parent_goal_id")) &&
       lower.includes("does not exist")
     ) {
       error =
-        "Your Neon `app_goals` table predates a column this build expects (parent link). Run db/goals-ensure-columns.sql and db/goals-strategic-vision-parent-migration.sql in the Neon SQL editor, then click \"Retry sync\".";
+        "Your Neon `app_goals` table predates a column or constraint this build expects. Run db/goals-ensure-columns.sql and db/goals-one-year-horizon-migration.sql in the Neon SQL editor, then click \"Retry sync\".";
     }
     const detail =
       process.env.NODE_ENV === "development"
@@ -233,7 +235,7 @@ export async function POST(request: Request) {
   }
 
   let visionParentGoalId: string | null = null;
-  if (body.horizon === "long_term") {
+  if (supportsOptionalVisionParent(body.horizon)) {
     const rawVision = body.visionParentGoalId;
     if (rawVision !== undefined && rawVision !== null && rawVision !== "") {
       const vid =
@@ -330,11 +332,6 @@ export async function POST(request: Request) {
       goal: goalFromRow(row),
     });
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("[POST /api/goals]", e);
-    return NextResponse.json(
-      { ok: false, error: msg.includes("duplicate") ? "Goal id conflict" : "Save failed" },
-      { status: 409 },
-    );
+    return goalsWriteErrorResponse(e);
   }
 }

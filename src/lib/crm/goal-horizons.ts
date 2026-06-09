@@ -2,6 +2,7 @@ import type { GoalHorizon } from "@/lib/crm/types";
 
 export const GOAL_HORIZONS: readonly GoalHorizon[] = [
   "short_term",
+  "one_year",
   "long_term",
   "vision_5",
   "vision_10",
@@ -15,14 +16,19 @@ export function isGoalHorizon(v: unknown): v is GoalHorizon {
   );
 }
 
-/** Near-term lanes roll up only to strategic (annual) goals. */
+/** Near-term lanes roll up to a one-year or strategic parent. */
 export function needsStrategicParent(horizon: GoalHorizon): boolean {
   return horizon === "short_term";
 }
 
-/** Strategic lanes may optionally anchor to any vision (5/10/20y) outcome. */
+/** Valid parent horizons when linking short-term goals upward. */
+export function isShortTermRollupParent(horizon: GoalHorizon): boolean {
+  return horizon === "one_year" || horizon === "long_term";
+}
+
+/** One-year and strategic lanes may optionally anchor to any vision (5/10/20y) outcome. */
 export function supportsOptionalVisionParent(horizon: GoalHorizon): boolean {
-  return horizon === "long_term";
+  return horizon === "one_year" || horizon === "long_term";
 }
 
 export function isVisionHorizon(h: GoalHorizon): boolean {
@@ -40,33 +46,41 @@ export const GOAL_HORIZON_FORM_OPTIONS: {
   {
     value: "short_term",
     label: "Short-term",
-    hint: "~30–90 days · rolls up to strategic",
+    hint: "~30–90 days · rolls up to one-year or strategic",
+  },
+  {
+    value: "one_year",
+    label: "One-year",
+    hint: "12-month outcomes · annual cadence",
   },
   {
     value: "long_term",
     label: "Strategic",
-    hint: "Annual / multi-quarter north star",
+    hint: "Multi-quarter north star beyond a single year",
   },
   {
     value: "vision_5",
     label: "Vision · 5 years",
-    hint: "Medium arc — leverage and craft",
+    hint: "Medium arc - leverage and craft",
   },
   {
     value: "vision_10",
     label: "Vision · 10 years",
-    hint: "Decadal posture — legacy & systems",
+    hint: "Decadal posture - legacy & systems",
   },
   {
     value: "vision_20",
     label: "Vision · 20 years",
-    hint: "Generational compass — identity-level",
+    hint: "Generational compass - identity-level",
   },
 ];
 
 export function goalAddFormBeatsLine(h: GoalHorizon): string {
   if (h === "short_term") {
-    return "Link to strategic north star, name the outcome, tune tracking.";
+    return "Link to a one-year or strategic parent, name the outcome, tune tracking.";
+  }
+  if (h === "one_year") {
+    return "Name the twelve-month win, sketch how you'll measure it, tune tracking.";
   }
   if (isVisionHorizon(h)) {
     return "Declare the directional outcome, sketch how you'd know you've arrived, tune tracking.";
@@ -79,6 +93,8 @@ export function goalHorizonHumanTitle(h: GoalHorizon): string {
   switch (h) {
     case "short_term":
       return "Short-term";
+    case "one_year":
+      return "One-year";
     case "long_term":
       return "Long-term";
     case "vision_5":
@@ -99,6 +115,8 @@ export function goalHorizonBadge(h: GoalHorizon): string {
   switch (h) {
     case "short_term":
       return "30–90 d";
+    case "one_year":
+      return "1 yr";
     case "long_term":
       return "Strategic";
     case "vision_5":
@@ -119,6 +137,8 @@ export function goalHorizonAddCtaLabel(h: GoalHorizon): string {
   switch (h) {
     case "short_term":
       return "Add near-term";
+    case "one_year":
+      return "Add one-year";
     case "long_term":
       return "Add strategic";
     case "vision_5":
@@ -139,6 +159,8 @@ export function goalHorizonRibbonClass(h: GoalHorizon): string {
   switch (h) {
     case "short_term":
       return "border-amber-400/30 bg-amber-500/10 text-amber-100/90";
+    case "one_year":
+      return "border-sky-400/35 bg-sky-500/10 text-sky-100/95";
     case "long_term":
       return "border-violet-400/30 bg-violet-500/10 text-violet-100/90";
     case "vision_5":
@@ -158,6 +180,8 @@ export function goalHorizonTriggerRingClass(h: GoalHorizon): string {
   switch (h) {
     case "short_term":
       return "border-amber-400/25 hover:border-amber-400/45 hover:bg-amber-500/[0.06]";
+    case "one_year":
+      return "border-sky-400/25 hover:border-sky-400/45 hover:bg-sky-500/[0.06]";
     case "long_term":
       return "border-violet-400/25 hover:border-violet-400/45 hover:bg-violet-500/[0.06]";
     case "vision_5":
@@ -175,6 +199,7 @@ export function goalHorizonTriggerRingClass(h: GoalHorizon): string {
 
 export function goalBoardColumnEyebrow(h: GoalHorizon): string {
   if (needsStrategicParent(h)) return "Near-term horizon · full board";
+  if (h === "one_year") return "One-year horizon · full board";
   if (isVisionHorizon(h)) return "Ultra-long horizon · full board";
   return "Strategic horizon · full board";
 }
@@ -183,6 +208,8 @@ export function goalSpotlightLaneLabel(h: GoalHorizon): string {
   switch (h) {
     case "short_term":
       return "30–90 days";
+    case "one_year":
+      return "Twelve-month arc";
     case "long_term":
       return "Strategic runway";
     case "vision_5":
@@ -202,6 +229,8 @@ export function goalSpotlightEmptyCue(h: GoalHorizon): string {
   switch (h) {
     case "short_term":
       return "near-term win";
+    case "one_year":
+      return "one-year outcome";
     case "long_term":
       return "strategic trajectory";
     case "vision_5":
